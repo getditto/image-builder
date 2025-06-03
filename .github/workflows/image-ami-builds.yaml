@@ -4,6 +4,8 @@ on:
    push:
       branches:
          - main
+         - PLA-93-gcp-images
+
    workflow_dispatch:
       inputs:
          k8s_version:
@@ -28,10 +30,12 @@ permissions:
   contents: read    # Allows reading repository contents
 
 jobs:
-   build-ami:
+   build-aws-ami:
+      if: false  # Disable this job for testing
       name: Build and Publish AMI
       runs-on: ubuntu-latest
       env:
+         CLOUD: "aws"
          AWS_REGION: "us-east-2"
          ACCOUNT_ID: "261908217831"
          ROLE: "image-builder-runner"
@@ -77,6 +81,57 @@ jobs:
            env:
              AWS_REGION: ${{ env.AWS_REGION }}
            run: |
-              ./images/capi/make_ami_public.sh
+              ./images/capi/make_images_public.sh
             
+   build-gcp-images:
+      name: Build and Publish GCP Images
+      runs-on: ubuntu-latest
+      env:
+        CLOUD: "gcp"        
+        GCP_REGION: "us-central1"
+        GCP_PROJECT_ID: "byoc-dev-459905"
+        ROLE: "image-builder-runner"
+
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Authenticate to GCP
+          id: 'gcp-auth'
+          uses: google-github-actions/auth@ba79af03959ebeac9769e648f473a284504d9193 # v2.1.10
+          with:
+            workload_identity_provider: 'projects/726183759074/locations/global/workloadIdentityPools/github-actions/providers/oidc-image-builder'
+            service_account: 'github-actions-service-account@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
+            token_format: 'access_token'
+            cleanup_credentials: true
+            access_token_lifetime: '3600s'
+
+        - name: Setup Packer
+          uses: hashicorp/setup-packer@main
+          with:
+            version: "latest"
+
+        - name: Install Packer Google Compute Plugin
+          run: |
+            packer plugins install github.com/hashicorp/googlecompute
+
+        - name: Validate Packer template
+          run: |
+            packer init -upgrade ./images/capi/packer/config.pkr.hcl
+            packer init -upgrade ./images/capi/packer/gce/config.pkr.hcl
+            make validate-gce-ubuntu-2404
+
+        - name: Build AMI
+          env:
+            GCP_PROJECT_ID: "byoc-dev-459905"
+            K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+            PKR_VAR_google_access_token: "${{ steps.gcp-auth.outputs.access_token }}"
+          run: |
+            ./images/capi/update_k8s_version.sh && \
+            make build-gce-ubuntu-2404
+
+        - name: Make AMI Public
+          run: |
+            ./images/capi/make_images_public.sh
+
 
