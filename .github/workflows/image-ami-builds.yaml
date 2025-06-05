@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - ore/auth0_migration
+      - ore/ditto-image-builder
       - vignesh/fix-k8s-version
   workflow_dispatch:
     inputs:
