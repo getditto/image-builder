@@ -89,8 +89,7 @@ jobs:
       env:
         CLOUD: "gcp"        
         GCP_REGION: "us-central1"
-        GCP_PROJECT_ID: "byoc-dev-459905"
-        ROLE: "image-builder-runner"
+        GCP_PROJECT_ID: "ditto-cloud-prod"
 
       steps:
         - name: Checkout repository
@@ -100,8 +99,8 @@ jobs:
           id: 'gcp-auth'
           uses: google-github-actions/auth@ba79af03959ebeac9769e648f473a284504d9193 # v2.1.10
           with:
-            workload_identity_provider: 'projects/726183759074/locations/global/workloadIdentityPools/github-actions/providers/oidc-image-builder'
-            service_account: 'github-actions-service-account@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
+            workload_identity_provider: 'projects/1063565642885/locations/global/workloadIdentityPools/ditto-cloud-prod-workload-pool/providers/ditto-cloud-prod-gha-oidc'
+            service_account: 'github-actions@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
             token_format: 'access_token'
             cleanup_credentials: true
             access_token_lifetime: '3600s'
@@ -123,7 +122,6 @@ jobs:
 
         - name: Build AMI
           env:
-            GCP_PROJECT_ID: "byoc-dev-459905"
             K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
             PKR_VAR_google_access_token: "${{ steps.gcp-auth.outputs.access_token }}"
           run: |
