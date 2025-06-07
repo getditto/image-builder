@@ -16,7 +16,7 @@ on:
 
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
-  ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}}"
+  ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}"
   AWS_REGION: "us-east-2"
   ACCOUNT_ID: "261908217831"
   ROLE: "image-builder-runner"
