@@ -4,7 +4,7 @@ on:
    push:
       branches:
          - main
-         - ore/auth0_migration
+         - ore/ditto-image-builder
    workflow_dispatch:
       inputs:
          k8s_version:
@@ -16,7 +16,12 @@ on:
 
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
-  ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}}"
+  ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}"
+  AWS_REGION: "us-east-2"
+  ACCOUNT_ID: "261908217831"
+  ROLE: "image-builder-runner"
+  AWS_OUTPUT: "json"
+
 
 
 permissions:
@@ -35,6 +40,15 @@ jobs:
           curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           chmod +x argocd
           sudo mv argocd /usr/local/bin/
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale version
+
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci,tag:github-actions,tag:repo-getditto-cloud-infra-ops,tag:use2-ops-int-dittolive-app,tag:usw2-ops-int-dittolive-app,tag:valet-vpc
 
       - name: Get live Kubernetes versions from ArgoCD
         id: versions
