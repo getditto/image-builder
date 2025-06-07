@@ -49,8 +49,6 @@ jobs:
           curl -fsSL https://tailscale.com/install.sh | sh
           sudo tailscale version
 
-
-
       - name: Tailscale
         uses: tailscale/github-action@v3
         with:
