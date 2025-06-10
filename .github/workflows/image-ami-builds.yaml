@@ -101,6 +101,11 @@ jobs:
               --query "Images[?Public==\`true\`].{ID:ImageId,Version:Tags[?Key=='kubernetes_version']|[0].Value}" \
               --output json | jq -r '.[] | [.ID, .Version] | @tsv' | awk -v live="$LIVE_VERSION" '$2 < live { print $1 }')
 
+            if [ -z "$AMI_IDS" ]; then
+              echo "✅ No outdated public AMIs found in $REGION. Skipping."
+              continue
+            fi
+
             for ami in $AMI_IDS; do
               echo "🧹 Deregistering public AMI: $ami (older than $LIVE_VERSION) in $REGION"
               echo "Making public access to AMI: $ami in $REGION private"
