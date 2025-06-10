@@ -4,7 +4,7 @@ on:
    push:
       branches:
          - main
-         - ore/auth0_migration
+         - ore/ditto-image-builder
    workflow_dispatch:
       inputs:
          k8s_version:
@@ -16,7 +16,12 @@ on:
 
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
-  ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}}"
+  ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}"
+  AWS_REGION: "us-east-2"
+  ACCOUNT_ID: "261908217831"
+  ROLE: "image-builder-runner"
+  AWS_OUTPUT: "json"
+
 
 
 permissions:
@@ -35,6 +40,15 @@ jobs:
           curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           chmod +x argocd
           sudo mv argocd /usr/local/bin/
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale version
+
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci,tag:github-actions,tag:repo-getditto-cloud-infra-ops,tag:use2-ops-int-dittolive-app,tag:usw2-ops-int-dittolive-app,tag:valet-vpc
 
       - name: Get live Kubernetes versions from ArgoCD
         id: versions
@@ -68,18 +82,23 @@ jobs:
       - name: Clean up old public AMIs
         run: |
           LIVE_VERSION="${{ steps.versions.outputs.min_k8s_version }}"
-          echo "Looking for public AMIs with K8s version less than $LIVE_VERSION"
+          REGIONS="eu-west-3 eu-west-2 eu-west-1 ca-central-1 eu-central-1 us-east-1 us-east-2 us-west-1 us-west-2 ap-southeast-2"
 
-          # Replace with your AMI filtering logic (using tags or naming pattern)
-          AMI_IDS=$(aws ec2 describe-images \
-            --owners self \
-            --filters "Name=tag:K8sVersion,Values=*" \
-            --query "Images[?Tags[?Key=='K8sVersion']].{ID:ImageId,Version:Tags[?Key=='K8sVersion']|[0].Value}" \
-            --output json | jq -r '.[] | select(.Version < "'"$LIVE_VERSION"'") | .ID')
+          echo "Looking for public AMIs with kubernetes_version less than $LIVE_VERSION and name containing 'capa-ami-ubuntu-24.04' in regions: $REGIONS"
 
-          for ami in $AMI_IDS; do
-            echo "🧹 Deregistering AMI: $ami (older than $LIVE_VERSION)"
-            echo "$ami"
+          for REGION in $REGIONS; do
+            echo "🔎 Checking region: $REGION"
+            AMI_IDS=$(aws ec2 describe-images \
+              --owners self \
+              --filters "Name=tag:kubernetes_version,Values=*" "Name=name,Values=*capa-ami-ubuntu-24.04*" \
+              --region "$REGION" \
+              --query "Images[?Tags[?Key=='kubernetes_version']].{ID:ImageId,Version:Tags[?Key=='kubernetes_version']|[0].Value,Public:Public}" \
+              --output json | jq -r 'select(length > 0) | .[] | select(.Version < "'"$LIVE_VERSION"'" and .Public == true) | .ID')
+
+            for ami in $AMI_IDS; do
+              echo "🧹 Deregistering public AMI: $ami (older than $LIVE_VERSION) in $REGION"
+              echo "Removing public access to AMI: $ami in $REGION"
+            done
           done
 
   build-ami:
