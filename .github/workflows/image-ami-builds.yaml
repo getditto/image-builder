@@ -20,6 +20,7 @@ on:
         required: false
         default: true
 
+
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
   ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}"
