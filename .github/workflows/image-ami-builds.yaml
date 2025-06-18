@@ -14,6 +14,7 @@ on:
             options:
                - "1.31.4"
 
+
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
   ARGOCD_TOKENS: "${{ secrets.ARGOCD_AUTH_TOKEN }}"
