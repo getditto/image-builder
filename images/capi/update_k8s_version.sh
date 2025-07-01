@@ -1,6 +1,20 @@
 #!/bin/sh
+# This script updates the kubernetes_semver and aws_profile fields in the ubuntu-2404.json file.
+# It ensures the Kubernetes version and AWS profile are set as desired.
 
-K8S_VERSION="${K8S_VERSION:-1.30.10}" # Default to 1.30.10 if not provided
+# Find the ubuntu-2404.json file in the images/capi/packer directory
+UBUNTU_FILE=$(find ./images/capi/packer -name "ubuntu-2404.json" | head -n 1)
+
+# Exit if the file is not found
+if [ -z "$UBUNTU_FILE" ]; then
+    echo "Error: ubuntu-2404.json file could not be found."
+    exit 1
+fi
+
+echo "Using ubuntu-2404.json at $UBUNTU_FILE"
+
+# Set the Kubernetes version, defaulting to 1.30.10 if not provided
+K8S_VERSION="${K8S_VERSION:-1.30.10}"
 
 CLOUD="${CLOUD:-aws}"
 
