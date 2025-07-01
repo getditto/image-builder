@@ -52,28 +52,14 @@
     enabled: false
   when: ansible_os_family == "Debian"
 
-# - name: Create cloud-init custom data source list
-#   ansible.builtin.copy:
-#     src: files/etc/cloud/cloud.cfg.d/90_dpkg.cfg
-#     dest: /etc/cloud/cloud.cfg.d/90_dpkg.cfg
-#     owner: root
-#     group: root
-#     mode: "0644"
-#   when:
-#     - ansible_distribution == "Ubuntu"
-#     - ansible_distribution_version is version('22.04', '>=')
-#     - enable_custom_cloudinit_datasource | default(false)
-
-- name: Create custom cloud-init data source
+- name: Create cloud-init custom data source list
   ansible.builtin.copy:
-    src: usr/lib/python3/dist-packages/cloudinit/sources/DataSourceEc2Kubernetes.py
-    dest: /usr/lib/python3/dist-packages/cloudinit/sources/DataSourceEc2Kubernetes.py
+    src: files/etc/cloud/cloud.cfg.d/90_dpkg.cfg
+    dest: /etc/cloud/cloud.cfg.d/90_dpkg.cfg
     owner: root
     group: root
     mode: "0644"
-  when:
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version is version('22.04', '>=')
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_version is version('22.04', '>=')
 
 - name: Fail if Ec2Kubernetes datasource is selected but file is missing
   ansible.builtin.stat:
@@ -94,6 +80,4 @@
     owner: root
     group: root
     mode: "0644"
-  when:
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version is version('22.04', '>=')
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_version is version('22.04', '>=')
