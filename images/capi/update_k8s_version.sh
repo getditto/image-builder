@@ -142,8 +142,5 @@ case "$CLOUD" in
     exit 1
     ;;
 esac
-<<<<<<< HEAD
 
 echo "Kubernetes version update completed for $CLOUD."
-=======
->>>>>>> b70ef19f9 (Made changes to fix issues to clean up old public ami's)
