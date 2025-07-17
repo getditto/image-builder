@@ -14,6 +14,7 @@ on:
         default: "1.31.4"
         options:
         - "1.31.4"
+        - "1.31.5"
       make_public:
         description: "Include step to make AMIs public. Useful to disable when testing, so we don't pollute our public AMI list or bloat our quota limit."
         type: boolean
