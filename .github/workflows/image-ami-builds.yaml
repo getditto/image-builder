@@ -19,7 +19,7 @@ on:
         description: "Include step to make AMIs public. Useful to disable when testing, so we don't pollute our public AMI list or bloat our quota limit."
         type: boolean
         required: false
-        default: true
+        default: false
 
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
