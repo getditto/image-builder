@@ -87,12 +87,6 @@ common_photon_rpms: &common_photon_rpms
   tar:
   unzip:
 
-photon_3_rpms: &photon_3_rpms
-  python-netifaces:
-  python-requests:
-  jq:
-  logrotate:
-
 photon_4_rpms: &photon_4_rpms
   jq:
   logrotate:
@@ -102,6 +96,8 @@ photon_5_rpms: &photon_5_rpms
   logrotate:
 
 arch: "amd64"
+containerd_gvisor_runtime: ""
+containerd_gvisor_version: ""
 containerd_version: ""
 containerd_wasm_shims_runtimes: ""
 kubernetes_cni_source_type: ""
@@ -245,9 +241,6 @@ photon:
       cloud-utils:
       python3-netifaces:
     os_version:
-    - distro_version: "3"
-      package:
-        <<: *photon_3_rpms
     - distro_version: "4"
       package:
         <<: *photon_4_rpms
@@ -332,6 +325,14 @@ rockylinux:
       package:
         <<: *rh8_rpms
   openstack:
+    package:
+      cloud-init:
+      cloud-utils-growpart:
+    os_version:
+    - distro_version: "9"
+      package:
+        <<: *rh9_rpms
+  scaleway:
     package:
       cloud-init:
       cloud-utils-growpart:
@@ -566,6 +567,10 @@ ubuntu:
       cloud-guest-utils:
       cloud-initramfs-copymods:
       cloud-initramfs-dyn-netconf:
+  scaleway:
+    service:
+    package:
+    command:
 
 oracle linux:
   common-kernel-param:

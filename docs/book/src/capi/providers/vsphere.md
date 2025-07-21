@@ -43,7 +43,7 @@ This file must have the following format (`cluster` can be replace by `host`):
     "network": "network_attached_to_template",
     "insecure_connection": "false",
     "template": "base_template_used_by_clone_builder",
-    "create_snbapshot": "creates a snaphot on base OVA after building",
+    "create_snapshot": "creates a snaphot on base OVA after building",
     "linked_clone": "Uses link cloning in vsphere-clone builder: true, by default"
 }
 ```
@@ -77,9 +77,7 @@ In addition to the configuration found in `images/capi/packer/config`, the `ova`
 
 | File               | Description                                                  |
 |--------------------|--------------------------------------------------------------|
-| `centos-7.json`    | The settings for the CentOS 7 image                          |
 | `flatcar.json`     | The settings for the Flatcar image                           |
-| `photon-3.json`    | The settings for the Photon 3 image                          |
 | `photon-4.json`    | The settings for the Photon 4 image                          |
 | `rhel-7.json`      | The settings for the RHEL 7 image                            |
 | `ubuntu-1804.json` | The settings for the Ubuntu 18.04 image                      |

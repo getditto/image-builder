@@ -210,6 +210,12 @@ deps-vultr: deps-common
 	$(PACKER) init packer/config.pkr.hcl
 	$(PACKER) init packer/vultr/config.pkr.hcl
 
+.PHONY: deps-scaleway
+deps-scaleway: ## Installs/checks dependencies for Scaleway builds
+deps-scaleway: deps-common
+	$(PACKER) init packer/config.pkr.hcl
+	$(PACKER) init packer/scaleway/config.pkr.hcl
+
 ## --------------------------------------
 ## Packer Configuration
 ## --------------------------------------
@@ -352,9 +358,8 @@ PACKER_POWERVS_NODE_FLAGS := $(foreach f,$(abspath $(COMMON_POWERVS_VAR_FILES)),
 ## --------------------------------------
 ## Platform and version combinations
 ## --------------------------------------
-CENTOS_VERSIONS			:=	centos-7
 FLATCAR_VERSIONS		:=	flatcar
-PHOTON_VERSIONS			:=	photon-3 photon-4 photon-5
+PHOTON_VERSIONS			:=	photon-4 photon-5
 RHEL_VERSIONS			:=	rhel-7 rhel-8 rhel-9
 ROCKYLINUX_VERSIONS		:=  rockylinux-8 rockylinux-9
 UBUNTU_VERSIONS			:=	ubuntu-2004 ubuntu-2004-efi ubuntu-2204 ubuntu-2204-efi ubuntu-2404 ubuntu-2404-efi
@@ -369,8 +374,7 @@ endif
 
 export FLATCAR_CHANNEL FLATCAR_VERSION
 
-PLATFORMS_AND_VERSIONS	:=	$(CENTOS_VERSIONS) \
-							$(PHOTON_VERSIONS) \
+PLATFORMS_AND_VERSIONS	:=	$(PHOTON_VERSIONS) \
 							$(RHEL_VERSIONS) \
 							$(ROCKYLINUX_VERSIONS) \
 							$(UBUNTU_VERSIONS) \
@@ -384,9 +388,9 @@ NODE_OVA_VSPHERE_BUILD_NAMES		:=	$(addprefix node-ova-vsphere-,$(PLATFORMS_AND_V
 NODE_OVA_VSPHERE_BASE_BUILD_NAMES		:=	$(addprefix node-ova-vsphere-base-,$(PLATFORMS_AND_VERSIONS))
 NODE_OVA_VSPHERE_CLONE_BUILD_NAMES		:=	$(addprefix node-ova-vsphere-clone-,$(PLATFORMS_AND_VERSIONS))
 
-AMI_BUILD_NAMES			   ?= ami-centos-7 ami-ubuntu-2004 ami-ubuntu-2204 ami-ubuntu-2404 ami-amazon-2 ami-amazon-2023 ami-flatcar ami-flatcar-arm64 ami-windows-2019 ami-rockylinux-8 ami-rhel-8
+AMI_BUILD_NAMES			   ?= ami-ubuntu-2004 ami-ubuntu-2204 ami-ubuntu-2404 ami-amazon-2 ami-amazon-2023 ami-flatcar ami-flatcar-arm64 ami-windows-2019 ami-rockylinux-8 ami-rhel-8
 HUAWEICLOUD_BUILD_NAMES ?= huaweicloud-ubuntu-2204
-GCE_BUILD_NAMES			   ?= gce-ubuntu-2004 gce-ubuntu-2204 gce-ubuntu-2404 gce-rhel-8
+GCE_BUILD_NAMES			   ?= gce-ubuntu-2204 gce-ubuntu-2404 gce-rhel-8
 
 # Make needs these lists to be space delimited, no quotes
 VHD_TARGETS := $(shell grep VHD_TARGETS azure_targets.sh | sed 's/VHD_TARGETS=//' | tr -d \")
@@ -400,13 +404,13 @@ AZURE_BUILD_SIG_CVM_NAMES ?= $(addsuffix -cvm,$(addprefix azure-sig-,$(SIG_CVM_T
 
 OCI_BUILD_NAMES				?= oci-ubuntu-2004 oci-ubuntu-2204 oci-oracle-linux-8 oci-oracle-linux-9 oci-windows-2019 oci-windows-2022
 
-DO_BUILD_NAMES 				?=	do-centos-7 do-ubuntu-2004 do-ubuntu-2204 do-ubuntu-2404
+DO_BUILD_NAMES 				?=	do-ubuntu-2004 do-ubuntu-2204 do-ubuntu-2404
 
 OPENSTACK_BUILD_NAMES		?=	openstack-ubuntu-2004 openstack-ubuntu-2204 openstack-ubuntu-2404 openstack-flatcar openstack-rockylinux-9
 
 OSC_BUILD_NAMES 			?=	osc-ubuntu-2004 osc-ubuntu-2204
 
-QEMU_BUILD_NAMES			?=	qemu-ubuntu-2004 qemu-ubuntu-2204 qemu-ubuntu-2204-cloudimg qemu-ubuntu-2304 qemu-ubuntu-2404 qemu-ubuntu-2404-efi qemu-ubuntu-2204-efi qemu-centos-7 qemu-centos-9 qemu-ubuntu-2004-efi qemu-rhel-8 qemu-rhel-9 qemu-rockylinux-8 qemu-rockylinux-8-cloudimg qemu-rockylinux-9 qemu-rockylinux-9-cloudimg qemu-flatcar
+QEMU_BUILD_NAMES			?=	qemu-ubuntu-2004 qemu-ubuntu-2204 qemu-ubuntu-2204-cloudimg qemu-ubuntu-2404 qemu-ubuntu-2404-efi qemu-ubuntu-2204-efi qemu-centos-9 qemu-ubuntu-2004-efi qemu-rhel-8 qemu-rhel-9 qemu-rockylinux-8 qemu-rockylinux-8-cloudimg qemu-rockylinux-9 qemu-rockylinux-9-cloudimg qemu-flatcar
 
 QEMU_KUBEVIRT_BUILD_NAMES	:= $(addprefix kubevirt-,$(QEMU_BUILD_NAMES))
 
@@ -416,13 +420,15 @@ POWERVS_BUILD_NAMES         ?= powervs-centos-8 powervs-centos-9
 
 NUTANIX_BUILD_NAMES ?= nutanix-ubuntu-2004 nutanix-ubuntu-2204 nutanix-ubuntu-2404 nutanix-rhel-8 nutanix-rhel-9 nutanix-rockylinux-8 nutanix-rockylinux-9 nutanix-flatcar nutanix-windows-2022
 
-HCLOUD_BUILD_NAMES ?= hcloud-ubuntu-2004 hcloud-ubuntu-2204 hcloud-ubuntu-2404 hcloud-centos-7 hcloud-rockylinux-8 hcloud-rockylinux-9 hcloud-flatcar hcloud-flatcar-arm64
+HCLOUD_BUILD_NAMES ?= hcloud-ubuntu-2004 hcloud-ubuntu-2204 hcloud-ubuntu-2404 hcloud-rockylinux-8 hcloud-rockylinux-9 hcloud-flatcar hcloud-flatcar-arm64
 
 PROXMOX_BUILD_NAMES 		?= proxmox-ubuntu-2204 proxmox-ubuntu-2404 proxmox-ubuntu-2404-efi proxmox-rockylinux-9 proxmox-flatcar
 
 VULTR_BUILD_NAMES 				?=	vultr-ubuntu-2204
 
 MAAS_BUILD_NAMES 			?= maas-ubuntu-2204-efi maas-ubuntu-2404-efi
+
+SCALEWAY_BUILD_NAMES 				?=	scaleway-rockylinux-9 scaleway-ubuntu-2204 scaleway-ubuntu-2404
 
 ## --------------------------------------
 ## Dynamic build targets
@@ -474,12 +480,14 @@ VULTR_BUILD_TARGETS 	:= $(addprefix build-,$(VULTR_BUILD_NAMES))
 VULTR_VALIDATE_TARGETS 	:= $(addprefix validate-,$(VULTR_BUILD_NAMES))
 MAAS_BUILD_TARGETS 	:= $(addprefix build-,$(MAAS_BUILD_NAMES))
 MAAS_VALIDATE_TARGETS 	:= $(addprefix validate-,$(MAAS_BUILD_NAMES))
+SCALEWAY_BUILD_TARGETS		:= $(addprefix build-,$(SCALEWAY_BUILD_NAMES))
+SCALEWAY_VALIDATE_TARGETS	:= $(addprefix validate-,$(SCALEWAY_BUILD_NAMES))
 
 .PHONY: $(NODE_OVA_LOCAL_BUILD_TARGETS)
 $(NODE_OVA_LOCAL_BUILD_TARGETS): deps-ova set-ssh-password
     # This uses a packer file builder to input unattend variables into a JSON file to be consumed by the python script before running the vmware-iso provisioner
 	$(if $(findstring windows,$@),$(PACKER) build $(PACKER_WINDOWS_NODE_FLAGS) -var-file="packer/ova/packer-common.json" -var-file="$(abspath packer/ova/$(subst build-node-ova-local-,,$@).json)" -only=file $(ABSOLUTE_PACKER_VAR_FILES) packer/ova/packer-windows.json,)
-	$(if $(findstring windows,$@),hack/windows-ova-unattend.py --unattend-file='./packer/ova/windows/$(subst build-node-ova-local-,,$@)/autounattend.xml',)
+	$(if $(findstring windows,$@),hack/windows-unattend.py --unattend-file='./packer/ova/windows/$(subst build-node-ova-local-,,$@)/autounattend.xml',)
 	$(PACKER) build $(if $(findstring windows,$@),$(PACKER_WINDOWS_NODE_FLAGS),$(PACKER_NODE_FLAGS)) -var-file="packer/ova/packer-common.json" -var-file="$(abspath packer/ova/$(subst build-node-ova-local-,,$@).json)" -except=vsphere -only=vmware-iso $(ABSOLUTE_PACKER_VAR_FILES) packer/ova/packer-$(if $(findstring windows,$@),windows,node).json
 
 .PHONY: $(NODE_OVA_LOCAL_VALIDATE_TARGETS)
@@ -498,7 +506,7 @@ $(NODE_OVA_LOCAL_BASE_BUILD_TARGETS): deps-ova set-ssh-password
 $(NODE_OVA_VSPHERE_BUILD_TARGETS): deps-ova set-ssh-password
     # This uses a packer file builder to input unattend variables into a JSON file to be consumed by the python script before running the vsphere provisioner
 	$(if $(findstring windows,$@),$(PACKER) build $(PACKER_WINDOWS_NODE_FLAGS) -var-file="packer/ova/packer-common.json" -var-file="$(abspath packer/ova/$(subst build-node-ova-vsphere-,,$@).json)" -only=file $(ABSOLUTE_PACKER_VAR_FILES) packer/ova/packer-windows.json,)
-	$(if $(findstring windows,$@),hack/windows-ova-unattend.py --unattend-file='./packer/ova/windows/$(subst build-node-ova-vsphere-,,$@)/autounattend.xml',)
+	$(if $(findstring windows,$@),hack/windows-unattend.py --unattend-file='./packer/ova/windows/$(subst build-node-ova-vsphere-,,$@)/autounattend.xml',)
 	$(PACKER) build $(if $(findstring windows,$@),$(PACKER_WINDOWS_NODE_FLAGS),$(PACKER_NODE_FLAGS))  -var-file="packer/ova/packer-common.json" -var-file="$(abspath packer/ova/$(subst build-node-ova-vsphere-,,$@).json)" -var-file="packer/ova/vsphere.json"  -except=local -only=vsphere-iso $(ABSOLUTE_PACKER_VAR_FILES) -only=vsphere packer/ova/packer-$(if $(findstring windows,$@),windows,node).json
 
 .PHONY: $(NODE_OVA_VSPHERE_BASE_BUILD_TARGETS)
@@ -636,6 +644,8 @@ $(NUTANIX_BUILD_TARGETS): deps-nutanix set-ssh-password
 	$(eval NUTANIX_USERDATA:=$(shell cat $(abspath packer/nutanix/linux/cloud-init/$(subst -,/,$(if $(findstring ubuntu,$@),$(call GET_UBUNTU_DOTTED_SEMVER,$(subst build-nutanix-,,$@)),$(subst build-nutanix-,,$@)))/user-data) | base64 -w0))
 	$(eval NUTANIX_VAR_FILE:=$(abspath packer/nutanix/$(subst build-nutanix-,,$@).json))
 	jq '.user_data = "$(NUTANIX_USERDATA)"' $(NUTANIX_VAR_FILE) > $(NUTANIX_VAR_FILE).templated && mv $(NUTANIX_VAR_FILE).templated $(NUTANIX_VAR_FILE)
+	# This uses a packer file builder to input unattend variables into a JSON file to be consumed by the python script before running the nutanix provisioner
+	$(if $(findstring windows,$@),hack/windows-unattend.py --unattend-file='./packer/nutanix/windows/$(subst build-nutanix-,,$@)/autounattend.xml',)
 	$(PACKER) build $(if $(findstring windows,$@),$(PACKER_WINDOWS_NODE_FLAGS),$(PACKER_NODE_FLAGS)) -var-file="packer/nutanix/nutanix.json" -var-file="$(abspath packer/nutanix/$(subst build-nutanix-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/nutanix/packer$(if $(findstring windows,$@),-windows,).json
 
 .PHONY: $(NUTANIX_VALIDATE_TARGETS)
@@ -674,6 +684,13 @@ $(MAAS_BUILD_TARGETS): deps-qemu set-ssh-password
 $(MAAS_VALIDATE_TARGETS): deps-qemu set-ssh-password
 	$(PACKER) validate $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/maas/$(subst validate-,,$@).json)" --var="ansible_user_vars=provider=maas" $(ABSOLUTE_PACKER_VAR_FILES) packer/maas/packer.json
 
+.PHONY: $(SCALEWAY_BUILD_TARGETS)
+$(SCALEWAY_BUILD_TARGETS): deps-scaleway
+	$(PACKER) build $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/scaleway/$(subst build-scaleway-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/scaleway/packer.json
+
+.PHONY: $(SCALEWAY_VALIDATE_TARGETS)
+$(SCALEWAY_VALIDATE_TARGETS): deps-scaleway
+	$(PACKER) validate $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/scaleway/$(subst validate-scaleway-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/scaleway/packer.json
 
 ## --------------------------------------
 ## Dynamic clean targets
@@ -699,7 +716,6 @@ $(RAW_CLEAN_TARGETS):
 ##@ Builds
 build-ami-amazon-2: ## Builds Amazon-2 Linux AMI
 build-ami-amazon-2023: ## Builds Amazon-2023 Linux AMI
-build-ami-centos-7: ## Builds CentOS 7 AMI
 build-ami-ubuntu-2004: ## Builds Ubuntu 20.04 AMI
 build-ami-ubuntu-2204: ## Builds Ubuntu 22.04 AMI
 build-ami-ubuntu-2404: ## Builds Ubuntu 24.04 AMI
@@ -713,8 +729,6 @@ build-ami-all: $(AMI_BUILD_TARGETS) ## Builds all AMIs
 build-azure-sig-ubuntu-2004: ## Builds Ubuntu 20.04 Azure managed image in Shared Image Gallery
 build-azure-sig-ubuntu-2204: ## Builds Ubuntu 22.04 Azure managed image in Shared Image Gallery
 build-azure-sig-ubuntu-2404: ## Builds Ubuntu 24.04 Azure managed image in Shared Image Gallery
-build-azure-sig-centos-7: ## Builds CentOS 7 Azure managed image in Shared Image Gallery
-build-azure-sig-mariner-2: ## Builds Azure Linux 2 Azure managed image in Shared Image Gallery
 build-azure-sig-azurelinux-3: ## Builds Azure Linux 3 Azure managed image in Shared Image Gallery
 build-azure-sig-rhel-8: ## Builds RHEL 8 Azure managed image in Shared Image Gallery
 build-azure-sig-windows-2019-containerd: ## Builds Windows Server 2019 with containerd Azure managed image in Shared Image Gallery
@@ -725,15 +739,11 @@ build-azure-sig-windows-2022-containerd-cvm: ## Builds Windows Server 2022 with 
 build-azure-vhd-ubuntu-2004: ## Builds Ubuntu 20.04 VHD image for Azure
 build-azure-vhd-ubuntu-2204: ## Builds Ubuntu 22.04 VHD image for Azure
 build-azure-vhd-ubuntu-2404: ## Builds Ubuntu 24.04 VHD image for Azure
-build-azure-vhd-centos-7: ## Builds CentOS 7 VHD image for Azure
-build-azure-vhd-mariner-2: ## Builds Azure Linux 2 VHD image for Azure
 build-azure-vhd-azurelinux-3: ## Builds Azure Linux 3 VHD image for Azure
 build-azure-vhd-rhel-8: ## Builds RHEL 8 VHD image for Azure
 build-azure-vhd-windows-2019-containerd: ## Builds for Windows Server 2019 with containerd
 build-azure-vhd-windows-2022-containerd: ## Builds for Windows Server 2022 with containerd
 build-azure-sig-windows-annual-containerd: ## Builds for Windows Server Annual Channel with containerd
-build-azure-sig-centos-7-gen2: ## Builds CentOS Gen2 managed image in Shared Image Gallery
-build-azure-sig-mariner-2-gen2: ## Builds Azure Linux 2 Gen2 managed image in Shared Image Gallery
 build-azure-sig-azurelinux-3-gen2: ## Builds Azure Linux 3 Gen2 managed image in Shared Image Gallery
 build-azure-sig-flatcar: ## Builds Flatcar Azure managed image in Shared Image Gallery
 build-azure-sig-flatcar-gen2: ## Builds Flatcar Azure Gen2 managed image in Shared Image Gallery
@@ -745,21 +755,12 @@ build-azure-sig-ubuntu-2204-cvm: ## Builds Ubuntu 22.04 CVM managed image in Sha
 build-azure-sig-ubuntu-2404-cvm: ## Builds Ubuntu 24.04 CVM managed image in Shared Image Gallery
 build-azure-vhds: $(AZURE_BUILD_VHD_TARGETS) ## Builds all Azure VHDs
 build-azure-sigs: $(AZURE_BUILD_SIG_TARGETS) $(AZURE_BUILD_SIG_GEN2_TARGETS) $(AZURE_BUILD_SIG_CVM_TARGETS) ## Builds all Azure Shared Image Gallery images
-# Targets for forward compatibility
-build-azure-vhd-azurelinux-2: ## Alias for build-azure-vhd-mariner-2
-	$(MAKE) build-azure-vhd-mariner-2
-build-azure-sig-azurelinux-2: ## Alias for build-azure-sig-mariner-2
-	$(MAKE) build-azure-sig-mariner-2
-build-azure-sig-azurelinux-2-gen2: ## Alias for build-azure-sig-mariner-2-gen2
-	$(MAKE) validate-azure-sig-mariner-2-gen2
 
 build-do-ubuntu-2004: ## Builds Ubuntu 20.04 DigitalOcean Snapshot
 build-do-ubuntu-2204: ## Builds Ubuntu 22.04 DigitalOcean Snapshot
 build-do-ubuntu-2404: ## Builds Ubuntu 24.04 DigitalOcean Snapshot
-build-do-centos-7: ## Builds Centos 7 DigitalOcean Snapshot
 build-do-all: $(DO_BUILD_TARGETS) ## Builds all DigitalOcean Snapshot
 
-build-gce-ubuntu-2004: ## Builds the GCE ubuntu-2004 image
 build-gce-ubuntu-2204: ## Builds the GCE ubuntu-2204 image
 build-gce-ubuntu-2404: ## Builds the GCE ubuntu-2404 image
 build-gce-rhel-8: ## Builds the GCE rhel-8 image
@@ -768,9 +769,7 @@ build-gce-all: $(GCE_BUILD_TARGETS) ## Builds all GCE image
 build-huaweicloud-ubuntu-2204: ## Builds Ubuntu 22.04 HuaweiCloud image
 build-huaweicloud-all: $(HUAWEICLOUD_BUILD_TARGETS) ## Builds all HuaweiCloud images
 
-build-node-ova-local-centos-7: ## Builds CentOS 7 Node OVA w local hypervisor
 build-node-ova-local-flatcar: ## Builds Flatcar stable Node OVA w local hypervisor
-build-node-ova-local-photon-3: ## Builds Photon 3 Node OVA w local hypervisor
 build-node-ova-local-photon-4: ## Builds Photon 4 Node OVA w local hypervisor
 build-node-ova-local-photon-5: ## Builds Photon 5 Node OVA w local hypervisor
 build-node-ova-local-rhel-7: ## Builds RHEL 7 Node OVA w local hypervisor
@@ -782,9 +781,7 @@ build-node-ova-local-ubuntu-2004: ## Builds Ubuntu 20.04 Node OVA w local hyperv
 build-node-ova-local-windows-2019: ## Builds for Windows Server 2019 Node OVA w local hypervisor
 build-node-ova-local-all: $(NODE_OVA_LOCAL_BUILD_TARGETS) ## Builds all Node OVAs w local hypervisor
 
-build-node-ova-vsphere-centos-7: ## Builds CentOS 7 Node OVA and template on vSphere
 build-node-ova-vsphere-flatcar: ## Builds Flatcar stable Node OVA and template on vSphere
-build-node-ova-vsphere-photon-3: ## Builds Photon 3 Node OVA and template on vSphere
 build-node-ova-vsphere-photon-4: ## Builds Photon 4 Node OVA and template on vSphere
 build-node-ova-vsphere-photon-5: ## Builds Photon 5 Node OVA and template on vSphere
 build-node-ova-vsphere-rhel-7: ## Builds RHEL 7 Node OVA and template on vSphere
@@ -804,8 +801,6 @@ build-node-ova-vsphere-windows-2022: ## Builds for Windows Server 2022 template 
 build-node-ova-vsphere-windows-2022-efi: ## Builds for Windows Server 2022 template on vSphere that EFI boots
 build-node-ova-vsphere-all: $(NODE_OVA_VSPHERE_BUILD_TARGETS) ## Builds all Node OVAs and templates on vSphere
 
-build-node-ova-vsphere-clone-centos-7: ## Builds CentOS 7 Node OVA and template on vSphere
-build-node-ova-vsphere-clone-photon-3: ## Builds Photon 3 Node OVA and template on vSphere
 build-node-ova-vsphere-clone-photon-4: ## Builds Photon 4 Node OVA and template on vSphere
 build-node-ova-vsphere-clone-photon-5: ## Builds Photon 5 Node OVA and template on vSphere
 build-node-ova-vsphere-clone-rhel-7: ## Builds RHEL 7 Node OVA and template on vSphere
@@ -820,8 +815,6 @@ build-node-ova-vsphere-clone-ubuntu-2404: ## Builds Ubuntu 24.04 Node OVA and te
 build-node-ova-vsphere-clone-ubuntu-2404-efi: ## ## Builds Ubuntu 24.04 Node OVA and template on vSphere that EFI boots
 build-node-ova-vsphere-clone-all: $(NODE_OVA_VSPHERE_CLONE_BUILD_TARGETS) ## Builds all Node OVAs and templates on vSphere
 
-build-node-ova-vsphere-base-centos-7: ## Builds base CentOS 7 Node OVA and template on vSphere
-build-node-ova-vsphere-base-photon-3: ## Builds base Photon 3 Node OVA and template on vSphere
 build-node-ova-vsphere-base-photon-4: ## Builds base Photon 4 Node OVA and template on vSphere
 build-node-ova-vsphere-base-photon-5: ## Builds base Photon 5 Node OVA and template on vSphere
 build-node-ova-vsphere-base-rhel-7: ## Builds base RHEL 7 Node OVA and template on vSphere
@@ -836,10 +829,8 @@ build-node-ova-vsphere-base-ubuntu-2404: ## Builds base Ubuntu 24.04 Node OVA an
 build-node-ova-vsphere-base-ubuntu-2404-efi: ## Builds Ubuntu 24.04 Node OVA and template on vSphere that EFI boots
 build-node-ova-vsphere-base-all: $(NODE_OVA_VSPHERE_BASE_BUILD_TARGETS) ## Builds all base Node OVAs and templates on vSphere
 
-build-node-ova-local-vmx-photon-3: ## Builds Photon 3 Node OVA from VMX file w local hypervisor
 build-node-ova-local-vmx-photon-4: ## Builds Photon 4 Node OVA from VMX file w local hypervisor
 build-node-ova-local-vmx-photon-5: ## Builds Photon 5 Node OVA from VMX file w local hypervisor
-build-node-ova-local-vmx-centos-7: ## Builds Centos 7 Node OVA from VMX file w local hypervisor
 build-node-ova-local-vmx-rhel-7: ## Builds RHEL 7 Node OVA from VMX file w local hypervisor
 build-node-ova-local-vmx-rhel-8: ## Builds RHEL 8 Node OVA from VMX file w local hypervisor
 build-node-ova-local-vmx-rhel-9: ## Builds RHEL 9 Node OVA from VMX file w local hypervisor
@@ -847,10 +838,8 @@ build-node-ova-local-vmx-rockylinux-8: ## Builds RockyLinux 8 Node OVA from VMX 
 build-node-ova-local-vmx-rockylinux-9: ## Builds RockyLinux 9 Node OVA from VMX file w local hypervisor
 build-node-ova-local-vmx-ubuntu-2004: ## Builds Ubuntu 20.04 Node OVA from VMX file w local hypervisor
 
-build-node-ova-local-base-photon-3: ## Builds Photon 3 Base Node OVA w local hypervisor
 build-node-ova-local-base-photon-4: ## Builds Photon 4 Base Node OVA w local hypervisor
 build-node-ova-local-base-photon-5: ## Builds Photon 5 Base Node OVA w local hypervisor
-build-node-ova-local-base-centos-7: ## Builds Centos 7 Base Node OVA w local hypervisor
 build-node-ova-local-base-rhel-7: ## Builds RHEL 7 Base Node OVA w local hypervisor
 build-node-ova-local-base-rhel-8: ## Builds RHEL 8 Base Node OVA w local hypervisor
 build-node-ova-local-base-rhel-9: ## Builds RHEL 9 Base Node OVA w local hypervisor
@@ -871,10 +860,8 @@ build-qemu-ubuntu-2004-efi: ## Builds Ubuntu 20.04 QEMU image that EFI boots
 build-qemu-ubuntu-2204: ## Builds Ubuntu 22.04 QEMU image
 build-qemu-ubuntu-2204-cloudimg: ## Builds Ubuntu 22.04 QEMU image using cloud image
 build-qemu-ubuntu-2204-efi: ## Builds Ubuntu 22.04 QEMU image that EFI boots
-build-qemu-ubuntu-2304: ## Builds Ubuntu 23.04 QEMU image
 build-qemu-ubuntu-2404: ## Builds Ubuntu 24.04 QEMU image
 build-qemu-ubuntu-2404-efi: ## Builds Ubuntu 24.04 QEMU image that EFI boots
-build-qemu-centos-7: ## Builds CentOS 7 QEMU image
 build-qemu-centos-9: ## Builds CentOS 9 Stream QEMU image
 build-qemu-rhel-8: ## Builds RHEL 8 QEMU image
 build-qemu-rhel-9: ## Builds RHEL 9 QEMU image
@@ -925,7 +912,6 @@ build-nutanix-all: $(NUTANIX_BUILD_TARGETS) ## Builds all Nutanix image
 build-hcloud-ubuntu-2004: ## Builds the Hetzner Cloud ubuntu-2004 image
 build-hcloud-ubuntu-2204: ## Builds the Hetzner Cloud ubuntu-2204 image
 build-hcloud-ubuntu-2404: ## Builds the Hetzner Cloud ubuntu-2404 image
-build-hcloud-centos-7: ## Builds the Hetzner Cloud CentOS 7 image
 build-hcloud-rockylinux-8: ## Builds the Hetzner Cloud Rocky Linux 8 image
 build-hcloud-rockylinux-9: ## Builds the Hetzner Cloud Rocky Linux 9 image
 build-hcloud-flatcar: ## Builds the Hetzner Cloud Flatcar image
@@ -940,13 +926,17 @@ build-proxmox-rockylinux-9: ## Builds the Proxmox rockylinux-9 image
 
 build-vultr-ubuntu-2204: ## Builds Ubuntu 22.04 Vultr Snapshot
 
+build-scaleway-rockylinux-9: ## Builds the Scaleway rockylinux-9 image
+build-scaleway-ubuntu-2204: ## Builds Ubuntu 22.04 Scaleway image
+build-scaleway-ubuntu-2404: ## Builds Ubuntu 24.04 Scaleway image
+build-scaleway-all: $(SCALEWAY_BUILD_TARGETS) ## Builds all Scaleway Cloud images
+
 ## --------------------------------------
 ## Document dynamic validate targets
 ## --------------------------------------
 ##@ Validate packer config
 validate-ami-amazon-2: ## Validates Amazon-2 Linux AMI Packer config
 validate-ami-amazon-2023: ## Validates Amazon-2023 Linux AMI Packer config
-validate-ami-centos-7: ## Validates CentOS 7 AMI Packer c`onfig
 validate-ami-rockylinux-8: ## Validates RockyLinux 8 AMI Packer config
 validate-ami-rhel-8: ## Validates RHEL-8 AMI Packer config
 validate-ami-flatcar: ## Validates Flatcar AMI Packer config
@@ -959,8 +949,6 @@ validate-ami-all: $(AMI_VALIDATE_TARGETS) ## Validates all AMIs Packer config
 
 validate-huaweicloud-ubuntu-2004: ## Validates Ubuntu 20.04 HuaweiCloud Snapshot Packer config
 
-validate-azure-sig-centos-7: ## Validates CentOS 7 Azure managed image in Shared Image Gallery Packer config
-validate-azure-sig-mariner-2: ## Validates Azure Linux 2 Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-azurelinux-3: ## Validates Azure Linux 3 Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-rhel-8: ## Validates RHEL 8 Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-ubuntu-2004: ## Validates Ubuntu 20.04 Azure managed image in Shared Image Gallery Packer config
@@ -970,8 +958,6 @@ validate-azure-sig-windows-2019-containerd: ## Validate Windows Server 2019 with
 validate-azure-sig-windows-2022-containerd: ## Validate Windows Server 2022 with containerd Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-windows-2025-containerd: ## Validate Windows Server 2025 with containerd Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-windows-annual-containerd: ## Validate Windows Server Annual Channel with containerd Azure managed image in Shared Image Gallery Packer config
-validate-azure-vhd-centos-7: ## Validates CentOS 7 VHD image Azure Packer config
-validate-azure-vhd-mariner-2: ## Validates Azure Linux 2 VHD image Azure Packer config
 validate-azure-vhd-azurelinux-3: ## Validates Azure Linux 3 VHD image Azure Packer config
 validate-azure-vhd-rhel-8: ## Validates RHEL 8 VHD image Azure Packer config
 validate-azure-vhd-ubuntu-2004: ## Validates Ubuntu 20.04 VHD image Azure Packer config
@@ -979,8 +965,6 @@ validate-azure-vhd-ubuntu-2204: ## Validates Ubuntu 22.04 VHD image Azure Packer
 validate-azure-vhd-ubuntu-2404: ## Validates Ubuntu 24.04 VHD image Azure Packer config
 validate-azure-vhd-windows-2019-containerd: ## Validate Windows Server 2019 VHD with containerd image Azure Packer config
 validate-azure-vhd-windows-2022-containerd: ## Validate Windows Server 2022 VHD with containerd image Azure Packer config
-validate-azure-sig-centos-7-gen2: ## Validates CentOS 7 Azure managed image in Shared Image Gallery Packer config
-validate-azure-sig-mariner-2-gen2: ## Validates Azure Linux 2 Gen2 Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-azurelinux-3-gen2: ## Validates Azure Linux 3 Gen2 Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-ubuntu-2004-gen2: ## Validates Ubuntu 20.04 Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-ubuntu-2004-cvm: ## Validates Ubuntu 20.04 CVM Azure managed image in Shared Image Gallery Packer config
@@ -989,18 +973,10 @@ validate-azure-sig-ubuntu-2204-cvm: ## Validates Ubuntu 22.04 CVM Azure managed 
 validate-azure-sig-ubuntu-2404-gen2: ## Validates Ubuntu 24.04 Azure managed image in Shared Image Gallery Packer config
 validate-azure-sig-ubuntu-2404-cvm: ## Validates Ubuntu 24.04 CVM Azure managed image in Shared Image Gallery Packer config
 validate-azure-all: $(AZURE_VALIDATE_SIG_TARGETS) $(AZURE_VALIDATE_VHD_TARGETS) $(AZURE_VALIDATE_SIG_GEN2_TARGETS) $(AZURE_VALIDATE_SIG_CVM_TARGETS) ## Validates all images for Azure Packer config
-# Targets for forward compatibility
-validate-azure-vhd-azurelinux-2: ## Alias for validate-azure-vhd-mariner-2
-	$(MAKE) validate-azure-vhd-mariner-2
-validate-azure-sig-azurelinux-2: ## Alias for validate-azure-sig-mariner-2
-	$(MAKE) validate-azure-sig-mariner-2
-validate-azure-sig-azurelinux-2-gen2: ## Alias for validate-azure-sig-mariner-2-gen2
-	$(MAKE) validate-azure-sig-mariner-2-gen2
 
 validate-do-ubuntu-2004: ## Validates Ubuntu 20.04 DigitalOcean Snapshot Packer config
 validate-do-ubuntu-2204: ## Validates Ubuntu 22.04 DigitalOcean Snapshot Packer config
 validate-do-ubuntu-2404: ## Validates Ubuntu 24.04 DigitalOcean Snapshot Packer config
-validate-do-centos-7: ## Validates Centos 7 DigitalOcean Snapshot Packer config
 validate-do-all: $(DO_VALIDATE_TARGETS) ## Validates all DigitalOcean Snapshot Packer config
 
 validate-openstack-ubuntu-2004: ## Validates Ubuntu 20.04 Openstack Image Packer config
@@ -1010,15 +986,12 @@ validate-openstack-rocky-9: ## Validates Rocky 9 Openstack Image Packer config
 validate-openstack-flatcar: ## Validates Flatcar Openstack Image Packer config
 validate-openstack-all: $(OPENSTACK_VALIDATE_TARGETS) ## Validates all Openstack Glance Image Packer config
 
-validate-gce-ubuntu-2004: ## Validates Ubuntu 20.04 GCE Snapshot Packer config
 validate-gce-ubuntu-2204: ## Validates Ubuntu 22.04 GCE Snapshot Packer config
 validate-gce-ubuntu-2404: ## Validates Ubuntu 24.04 GCE Snapshot Packer config
 validate-gce-rhel-8: ## Validates RHEL 8 GCE Snapshot Packer config
 validate-gce-all: $(GCE_VALIDATE_TARGETS) ## Validates all GCE Snapshot Packer config
 
-validate-node-ova-local-centos-7: ## Validates CentOS 7 Node OVA Packer config w local hypervisor
 validate-node-ova-local-flatcar: ## Validates Flatcar stable Node OVA Packer config w local hypervisor
-validate-node-ova-local-photon-3: ## Validates Photon 3 Node OVA Packer config w local hypervisor
 validate-node-ova-local-photon-4: ## Validates Photon 4 Node OVA Packer config w local hypervisor
 validate-node-ova-local-photon-5: ## Validates Photon 5 Node OVA Packer config w local hypervisor
 validate-node-ova-local-rhel-7: ## Validates RHEL 7 Node OVA Packer config w local hypervisor
@@ -1033,10 +1006,8 @@ validate-node-ova-local-windows-2019: ## Validates Windows Server 2019 Node OVA 
 validate-node-ova-local-windows-2022: ## Validates Windows Server 2022 Node OVA Packer config w local hypervisor
 validate-node-ova-local-all: $(NODE_OVA_LOCAL_VALIDATE_TARGETS) ## Validates all Node OVAs Packer config w local hypervisor
 
-validate-node-ova-local-vmx-photon-3: ## Validates Photon 3 Node OVA from VMX file w local hypervisor
 validate-node-ova-local-vmx-photon-4: ## Validates Photon 4 Node OVA from VMX file w local hypervisor
 validate-node-ova-local-vmx-photon-5: ## Validates Photon 5 Node OVA from VMX file w local hypervisor
-validate-node-ova-local-vmx-centos-7: ## Validates Centos 7 Node OVA from VMX file w local hypervisor
 validate-node-ova-local-vmx-rhel-7: ## Validates RHEL 7 Node OVA from VMX file w local hypervisor
 validate-node-ova-local-vmx-rhel-8: ## Validates RHEL 8 Node OVA from VMX file w local hypervisor
 validate-node-ova-local-vmx-rhel-9: ## Validates RHEL 9 Node OVA from VMX file w local hypervisor
@@ -1046,10 +1017,8 @@ validate-node-ova-local-vmx-ubuntu-2004: ## Validates Ubuntu 20.04 Node OVA from
 validate-node-ova-local-vmx-ubuntu-2204: ## Validates Ubuntu 22.04 Node OVA from VMX file w local hypervisor
 validate-node-ova-local-vmx-ubuntu-2404: ## Validates Ubuntu 24.04 Node OVA from VMX file w local hypervisor
 
-validate-node-ova-local-base-photon-3: ## Validates Photon 3 Base Node OVA w local hypervisor
 validate-node-ova-local-base-photon-4: ## Validates Photon 4 Base Node OVA w local hypervisor
 validate-node-ova-local-base-photon-5: ## Validates Photon 5 Base Node OVA w local hypervisor
-validate-node-ova-local-base-centos-7: ## Validates Centos 7 Base Node OVA w local hypervisor
 validate-node-ova-local-base-rhel-7: ## Validates RHEL 7 Base Node OVA w local hypervisor
 validate-node-ova-local-base-rhel-8: ## Validates RHEL 8 Base Node OVA w local hypervisor
 validate-node-ova-local-base-rhel-9: ## Validates RHEL 9 Base Node OVA w local hypervisor
@@ -1065,10 +1034,8 @@ validate-qemu-ubuntu-2004-efi: ## Validates Ubuntu 20.04 QEMU EFI image packer c
 validate-qemu-ubuntu-2204: ## Validates Ubuntu 22.04 QEMU image packer config
 validate-qemu-ubuntu-2204-cloudimg: ## Validates Ubuntu 22.04 QEMU image packer config using cloud image
 validate-qemu-ubuntu-2204-efi: ## Validates Ubuntu 22.04 QEMU EFI image packer config
-validate-qemu-ubuntu-2304: ## Validates Ubuntu 23.04 QEMU image packer config
 validate-qemu-ubuntu-2404: ## Validates Ubuntu 24.04 QEMU image packer config
 validate-qemu-ubuntu-2404-efi: ## Validates Ubuntu 24.04 QEMU EFI image packer config
-validate-qemu-centos-7: ## Validates CentOS 7 QEMU image packer config
 validate-qemu-rhel-8: ## Validates RHEL 8 QEMU image
 validate-qemu-rhel-9: ## Validates RHEL 9 QEMU image
 validate-qemu-rockylinux-8: ## Validates Rocky Linux 8 QEMU image packer config
@@ -1117,7 +1084,6 @@ validate-nutanix-all: $(NUTANIX_VALIDATE_TARGETS) ## Validates all Nutanix Packe
 validate-hcloud-ubuntu-2004: ## Validates Ubuntu 20.04 Hetzner Cloud Packer config
 validate-hcloud-ubuntu-2204: ## Validates Ubuntu 22.04 Hetzner Cloud Packer config
 validate-hcloud-ubuntu-2404: ## Validates Ubuntu 24.04 Hetzner Cloud Packer config
-validate-hcloud-centos-7: ## Validates CentOS 7 Hetzner Cloud Packer config
 validate-hcloud-rockylinux-8: ## Validates Rocky Linux 8 Hetzner Cloud Packer config
 validate-hcloud-rockylinux-9: ## Validates the Hetzner Cloud Rocky Linux 9 Packer config
 validate-hcloud-flatcar: ## Validates the Hetzner Cloud Flatcar Packer config
@@ -1128,6 +1094,11 @@ validate-proxmox-ubuntu-2204: ## Validates Ubuntu 22.04 Proxmox Packer config
 validate-proxmox-flatcar: ## Validates Flatcar Proxmox Packer config
 
 validate-vultr-ubuntu-2204: ## Validates Ubuntu 22.04 Vultr Snapshot Packer config
+
+validate-scaleway-rockylinux-9: ## Validates Rocky Linux 9 Scaleway image Packer config
+validate-scaleway-ubuntu-2204: ## Validates Ubuntu 22.04 Scaleway image Packer config
+validate-scaleway-ubuntu-2404: ## Validates Ubuntu 24.04 Scaleway image Packer config
+validate-scaleway-all: $(SCALEWAY_VALIDATE_TARGETS) ## Validates all Scaleway Cloud Packer config
 
 validate-all: validate-ami-all \
 	validate-azure-all \
@@ -1140,7 +1111,8 @@ validate-all: validate-ami-all \
 	validate-osc-all \
 	validate-powervs-all \
 	validate-nutanix-all \
-	validate-hcloud-all
+	validate-hcloud-all \
+	validate-scaleway-all
 
 validate-all: ## Validates the Packer config for all build targets
 
@@ -1257,7 +1229,6 @@ gen-ignition: deps-ignition ## Generates Ignition files from CLC
 .PHONY: update-all-iso-checksums
 update-all-iso-checksums: update-ubuntu-iso-checksums \
 	update-rockylinux-iso-checksums \
-	update-centos-7-iso-checksums \
 	update-centos-9-iso-checksums \
 	update-photon-iso-checksums \
 
@@ -1271,11 +1242,6 @@ update-ubuntu-iso-checksums: ## Updates checksums for Ubuntu ISOs
 .PHONY: update-rockylinux-iso-checksums
 update-rockylinux-iso-checksums: ## Updates checksums for Rocky Linux ISOs
 	hack/update-iso-checksums.sh rockylinux false CHECKSUM "SHA256 (iso_file_name)" 4
-	$(MAKE) json-sort
-
-.PHONY: update-centos-7-iso-checksums
-update-centos-7-iso-checksums: ## Updates checksums for Centos 7 ISOs
-	hack/update-iso-checksums.sh centos-7 false sha256sum.txt "iso_file_name" 1
 	$(MAKE) json-sort
 
 .PHONY: update-centos-9-iso-checksums

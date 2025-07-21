@@ -1,47 +1,35 @@
 {
   "builders": [
     {
-      "access_key": "{{ user `access_key` }}",
-      "global_permission": "{{ user `global_permission` }}",
-      "omi_account_ids": [
-        "{{ user `account_id` }}"
-      ],
-      "omi_name": "{{user `omi_name`}}",
-      "region": "{{ user `region` }}",
-      "secret_key": "{{ user `secret_key` }}",
-      "source_omi": "{{ user `source_image` }}",
-      "source_omi_filter": {
-        "filters": {
-          "image-name": "{{ user `image_name` }}"
-        },
-        "owners": [
-          "{{ user `owner` }}"
-        ]
+      "access_key": "{{user `access_key`}}",
+      "commercial_type": "{{user `commercial_type`}}",
+      "image": "{{user `image`}}",
+      "image_name": "{{user `image_name`}}",
+      "project_id": "{{user `project_id`}}",
+      "remove_volume": true,
+      "root_volume": {
+        "type": "{{user `root_volume_type`}}"
       },
-      "ssh_username": "outscale",
-      "tags": {
-        "Base_OMI_Name": "{{ .SourceOMIName }}",
-        "Extra": "{{ .SourceOMITags.TagName }}",
-        "OS_Version": "{{user `distribution_release`}}",
-        "Release": "{{user `distribution_version`}}",
-        "distribution_release": "{{user `distribution_release`}}",
-        "distribution_version": "{{user `distribution_version`}}",
-        "kubernetes_version": "{{user `kubernetes_semver`}}"
-      },
-      "type": "outscale-bsu",
-      "vm_type": "{{user `vm_type`}}"
+      "secret_key": "{{user `secret_key`}}",
+      "ssh_username": "root",
+      "type": "scaleway",
+      "zone": "{{user `zone`}}"
     }
   ],
   "provisioners": [
     {
       "ansible_env_vars": [
-        "ANSIBLE_SSH_ARGS='{{user `existing_ansible_ssh_args`}} -o IdentitiesOnly=yes'"
+        "ANSIBLE_SSH_ARGS='{{user `existing_ansible_ssh_args`}} {{user `ansible_common_ssh_args`}}'"
       ],
       "extra_arguments": [
         "--extra-vars",
         "{{user `ansible_common_vars`}}",
         "--extra-vars",
-        "{{user `ansible_extra_vars`}}"
+        "{{user `ansible_extra_vars`}}",
+        "--extra-vars",
+        "{{user `ansible_user_vars`}}",
+        "--scp-extra-args",
+        "{{user `ansible_scp_extra_args`}}"
       ],
       "playbook_file": "./ansible/node.yml",
       "type": "ansible"
@@ -67,7 +55,7 @@
         "ARCH": "amd64",
         "OS": "{{user `distribution` | lower}}",
         "OS_VERSION": "{{user `distribution_version` | lower}}",
-        "PROVIDER": "outscale",
+        "PROVIDER": "scaleway",
         "containerd_gvisor_runtime": "{{user `containerd_gvisor_runtime`}}",
         "containerd_gvisor_version": "{{user `containerd_gvisor_version`}}",
         "containerd_version": "{{user `containerd_version`}}",
@@ -76,7 +64,7 @@
         "kubernetes_cni_source_type": "{{user `kubernetes_cni_source_type`}}",
         "kubernetes_cni_version": "{{user `kubernetes_cni_semver` | replace \"v\" \"\" 1}}",
         "kubernetes_deb_version": "{{ user `kubernetes_deb_version` }}",
-        "kubernetes_rpm_version": "{{ split (user `kubernetes_rpm_version`) \"-\" 0  }}",
+        "kubernetes_rpm_version": "{{ split (user `kubernetes_rpm_version`) \"-\" 0 }}",
         "kubernetes_source_type": "{{user `kubernetes_source_type`}}",
         "kubernetes_version": "{{user `kubernetes_semver` | replace \"v\" \"\" 1}}"
       },
@@ -84,11 +72,12 @@
     }
   ],
   "variables": {
-    "access_key": "{{env `OSC_ACCESS_KEY`}}",
-    "account_id": "{{env `OSC_ACCOUNT_ID`}}",
+    "access_key": "{{env `SCW_ACESS_KEY`}}",
     "ansible_common_vars": "",
     "ansible_extra_vars": "",
+    "ansible_scp_extra_args": "",
     "build_timestamp": "{{timestamp}}",
+    "commercial_type": "DEV1-S",
     "containerd_gvisor_runtime": "false",
     "containerd_gvisor_version": "latest",
     "containerd_sha256": null,
@@ -96,10 +85,8 @@
     "containerd_version": null,
     "crictl_url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{user `crictl_version`}}/crictl-v{{user `crictl_version`}}-linux-amd64.tar.gz",
     "crictl_version": null,
-    "distribution_release": null,
-    "distribution_version": null,
     "existing_ansible_ssh_args": "{{env `ANSIBLE_SSH_ARGS`}}",
-    "global_permission": "true",
+    "image_name": "cluster-api-{{user `build_name`}}-{{user `kubernetes_semver`}}-{{user `build_timestamp`}}",
     "kubernetes_cni_deb_version": null,
     "kubernetes_cni_http_source": null,
     "kubernetes_cni_rpm_version": null,
@@ -118,10 +105,9 @@
     "kubernetes_semver": null,
     "kubernetes_series": null,
     "kubernetes_source_type": null,
-    "omi_name": "{{user `build_name`}}-{{user `distribution_version`}}-kubernetes-{{user `kubernetes_semver`}}-{{timestamp}}",
-    "owner": "Outscale",
-    "region": "{{env `OSC_REGION`}}",
-    "secret_key": "{{env `OSC_SECRET_KEY`}}",
-    "vm_type": "tinav5.c2r4p2"
+    "project_id": "{{env `SCW_PROJECT_ID`}}",
+    "root_volume_type": "sbs_volume",
+    "secret_key": "{{env `SCW_SECRET_KEY`}}",
+    "zone": "fr-par-1"
   }
 }

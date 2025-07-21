@@ -140,6 +140,8 @@
         "{{user `boot_command_suffix`}}"
       ],
       "boot_wait": "{{user `boot_wait`}}",
+      "cd_files": "{{user `cd_content_location`}}",
+      "cd_label": "{{user `cd_label`}}",
       "cdrom_type": "{{user `cdrom_type`}}",
       "cluster": "{{user `cluster`}}",
       "communicator": "ssh",
@@ -451,6 +453,8 @@
         "OS_VERSION": "{{user `distro_version` | lower}}",
         "PROVIDER": "ova",
         "block_nouveau_loading": "{{user `block_nouveau_loading`}}",
+        "containerd_gvisor_runtime": "{{user `containerd_gvisor_runtime`}}",
+        "containerd_gvisor_version": "{{user `containerd_gvisor_version`}}",
         "containerd_version": "{{user `containerd_version`}}",
         "kubernetes_cni_deb_version": "{{ user `kubernetes_cni_deb_version` }}",
         "kubernetes_cni_rpm_version": "{{ split (user `kubernetes_cni_rpm_version`) \"-\" 0 }}",

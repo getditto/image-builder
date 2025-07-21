@@ -14,12 +14,12 @@ on:
         default: "1.31.4"
         options:
         - "1.31.4"
+        - "1.31.5"
       make_public:
         description: "Include step to make AMIs public. Useful to disable when testing, so we don't pollute our public AMI list or bloat our quota limit."
         type: boolean
         required: false
-        default: true
-
+        default: false
 
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
@@ -159,7 +159,6 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
             ./images/capi/make_images_public.sh
-            
   build-gcp-images:
     name: Build and Publish GCP Images
     runs-on: ubuntu-latest
