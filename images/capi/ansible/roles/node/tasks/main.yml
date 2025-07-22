@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ---
-- ansible.builtin.import_tasks: photon.yml
-  when: ansible_os_family == "VMware Photon OS"
+- ansible.builtin.import_tasks: dittoOverrides.yml
 
 - ansible.builtin.import_tasks: amazonLinux.yml
   when: ansible_distribution == "Amazon"
+
+- ansible.builtin.import_tasks: photon.yml
+  when: ansible_os_family == "VMware Photon OS"
 
 # This is required until https://github.com/ansible/ansible/issues/77537 is fixed and used.
 - name: Override Flatcar's OS family
