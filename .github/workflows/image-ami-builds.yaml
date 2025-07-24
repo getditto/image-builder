@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-      - ore/ditto-image-builder
-      - vignesh/fix-k8s-version
   workflow_dispatch:
     inputs:
       k8s_version:
