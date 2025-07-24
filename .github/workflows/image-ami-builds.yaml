@@ -85,32 +85,12 @@ jobs:
           role-to-assume: "arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.ROLE }}"
 
       - name: Clean up old public AMIs
+        env:
+          ACCOUNT_ID: ${{ env.ACCOUNT_ID }}
         run: |
           LIVE_VERSION="${{ steps.versions.outputs.min_k8s_version }}"
           REGIONS="eu-west-3 eu-west-2 eu-west-1 ca-central-1 eu-central-1 us-east-1 us-east-2 us-west-1 us-west-2 ap-southeast-2"
-
-          echo "Looking for public AMIs with kubernetes_version less than $LIVE_VERSION and name containing 'capa-ami-ubuntu-24.04' in regions: $REGIONS"
-
-          for REGION in $REGIONS; do
-            echo "🔎 Checking region: $REGION"
-            AMI_IDS=$(aws ec2 describe-images \
-              --owners "${{ env.ACCOUNT_ID }}" \
-              --filters "Name=tag:kubernetes_version,Values=*" \
-              --region "$REGION" \
-              --query "Images[?Public==\`true\`].{ID:ImageId,Version:Tags[?Key=='kubernetes_version']|[0].Value}" \
-              --output json | jq -r '.[] | [.ID, .Version] | @tsv' | awk -v live="$LIVE_VERSION" '$2 < live { print $1 }')
-
-            if [ -z "$AMI_IDS" ]; then
-              echo "✅ No outdated public AMIs found in $REGION. Skipping."
-              continue
-            fi
-
-            for ami in $AMI_IDS; do
-              echo "🧹 Deregistering public AMI: $ami (older than $LIVE_VERSION) in $REGION"
-              echo "Making public access to AMI: $ami in $REGION private"
-              aws ec2 modify-image-attribute --image-id "$ami" --region "$REGION" --launch-permission "Remove=[{Group=all}]"
-            done
-          done
+          ./images/capi/scripts/clean-old-aws-ami.sh "$LIVE_VERSION" "$ACCOUNT_ID" "$REGIONS"
 
   build-aws-ami:
     name: Build and Publish AMI
@@ -153,6 +133,7 @@ jobs:
           make build-ami-ubuntu-2404
 
       - name: Make AMI Public
+        if: ${{ github.event.inputs.make_public == 'true' }}
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
