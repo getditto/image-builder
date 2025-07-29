@@ -11,8 +11,8 @@ on:
         required: false
         default: "1.31.4"
         options:
-        - "1.31.4"
-        - "1.31.5"
+          - "1.31.4"
+          - "1.31.5"
       make_public:
         description: "Include step to make AMIs public. Useful to disable when testing, so we don't pollute our public AMI list or bloat our quota limit."
         type: boolean
@@ -30,8 +30,8 @@ env:
   GCP_PROJECT_ID: "ditto-cloud-prod"
 
 permissions:
-  id-token: write   # This is crucial for OIDC authentication
-  contents: read    # Allows reading repository contents
+  id-token: write # This is crucial for OIDC authentication
+  contents: read # Allows reading repository contents
 
 jobs:
   cleanup-outdated-ami:
@@ -120,7 +120,7 @@ jobs:
 
       - name: Validate Packer template
         run: |
-          packer init -upgrade ./images/capi/packer/config.pkr.hcl 
+          packer init -upgrade ./images/capi/packer/config.pkr.hcl
           make validate-ami-ubuntu-2404
 
       - name: Build AMI
@@ -137,25 +137,25 @@ jobs:
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
-            ./images/capi/make_images_public.sh
+          ./images/capi/make_images_public.sh
   build-gcp-images:
     name: Build and Publish GCP Images
     runs-on: ubuntu-latest
     env:
-      CLOUD: "gcp"        
+      CLOUD: "gcp"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Authenticate to GCP
-        id: 'gcp-auth'
+        id: "gcp-auth"
         uses: google-github-actions/auth@ba79af03959ebeac9769e648f473a284504d9193 # v2.1.10
         with:
-          workload_identity_provider: 'projects/1063565642885/locations/global/workloadIdentityPools/ditto-cloud-prod-workload-pool/providers/ditto-cloud-prod-gha-oidc'
-          service_account: 'github-actions@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
-          token_format: 'access_token'
+          workload_identity_provider: "projects/1063565642885/locations/global/workloadIdentityPools/ditto-cloud-prod-workload-pool/providers/ditto-cloud-prod-gha-oidc"
+          service_account: "github-actions@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+          token_format: "access_token"
           cleanup_credentials: true
-          access_token_lifetime: '3600s'
+          access_token_lifetime: "3600s"
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
@@ -174,7 +174,7 @@ jobs:
 
       - name: Build GCP Images
         env:
-          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.32.4' }} 
+          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.32.4' }}
           PKR_VAR_google_access_token: "${{ steps.gcp-auth.outputs.access_token }}"
         run: |
           ./images/capi/update_k8s_version.sh && \
@@ -184,5 +184,3 @@ jobs:
         if: ${{ github.event.inputs.make_public == 'true' }}
         run: |
           ./images/capi/make_images_public.sh
-
-
