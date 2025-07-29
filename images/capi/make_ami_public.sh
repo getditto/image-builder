@@ -1,5 +1,6 @@
-# This script makes AMIs public in all regions specified in the packer-manifest.json file.
 #!/bin/bash
+# This script makes AMIs public in all regions specified in the packer-manifest.json file.
+
 set -euo pipefail
 
 # Check if packer-manifest.json exists in the expected location

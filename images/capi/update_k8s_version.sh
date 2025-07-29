@@ -1,7 +1,5 @@
 #!/bin/bash
-
 set -euo pipefail
-#!/bin/sh
 # This script updates the kubernetes_semver and aws_profile fields in the ubuntu-2404.json file.
 # It ensures the Kubernetes version and AWS profile are set as desired.
 
@@ -16,13 +14,11 @@ fi
 
 echo "Using ubuntu-2404.json at $UBUNTU_FILE"
 
-# Set the Kubernetes version, defaulting to 1.30.10 if not provided
-K8S_VERSION="${K8S_VERSION:-1.30.10}"
-
+# Set the Kubernetes version, defaulting to 1.31.4 if not provided
 CLOUD="${CLOUD:-aws}"
 K8S_VERSION="${K8S_VERSION:-1.31.4}"
 
-# Extract kubernetes series from version (e.g., "1.30.10" -> "v1.30")
+# Extract kubernetes series from version (e.g., "1.31.4" -> "v1.31")
 K8S_SERIES="v$(echo "$K8S_VERSION" | cut -d. -f1,2)"
 
 # Set crictl version to match kubernetes version
@@ -63,10 +59,10 @@ case "$CLOUD" in
        --arg k8s_deb_version "$K8S_DEB_VERSION" \
        --arg k8s_rpm_version "$K8S_RPM_VERSION" \
        --arg crictl_version "$CRICTL_VERSION" \
-       '.kubernetes_semver = $k8s_semver | 
-        .kubernetes_series = $k8s_series | 
-        .kubernetes_deb_version = $k8s_deb_version | 
-        .kubernetes_rpm_version = $k8s_rpm_version | 
+       '.kubernetes_semver = $k8s_semver |
+        .kubernetes_series = $k8s_series |
+        .kubernetes_deb_version = $k8s_deb_version |
+        .kubernetes_rpm_version = $k8s_rpm_version |
         .crictl_version = $crictl_version' \
        "$AWS_FILE" > "$AWS_FILE.tmp" && mv "$AWS_FILE.tmp" "$AWS_FILE"
 
@@ -80,7 +76,7 @@ case "$CLOUD" in
         echo "AWS profile matches: $AWS_PROFILE_ENV"
     fi
     ;;
-  
+
   gcp)
     # GCP-specific block to update GCP packer file
     GCP_FILE=$(find ./images/capi/packer/gce -name "ubuntu-2404.json" | head -n 1)
@@ -99,16 +95,16 @@ case "$CLOUD" in
        --arg k8s_deb_version "$K8S_DEB_VERSION" \
        --arg k8s_rpm_version "$K8S_RPM_VERSION" \
        --arg crictl_version "$CRICTL_VERSION" \
-       '.kubernetes_semver = $k8s_semver | 
-        .kubernetes_series = $k8s_series | 
-        .kubernetes_deb_version = $k8s_deb_version | 
-        .kubernetes_rpm_version = $k8s_rpm_version | 
+       '.kubernetes_semver = $k8s_semver |
+        .kubernetes_series = $k8s_series |
+        .kubernetes_deb_version = $k8s_deb_version |
+        .kubernetes_rpm_version = $k8s_rpm_version |
         .crictl_version = $crictl_version' \
        "$GCP_FILE" > "$GCP_FILE.tmp" && mv "$GCP_FILE.tmp" "$GCP_FILE"
 
     echo "Updated GCP Kubernetes versions successfully."
     ;;
-  
+
   azure)
     # Azure-specific block to update Azure packer file
     AZURE_FILE=$(find ./images/capi/packer/azure -name "ubuntu-2404.json" | head -n 1)
@@ -127,16 +123,16 @@ case "$CLOUD" in
        --arg k8s_deb_version "$K8S_DEB_VERSION" \
        --arg k8s_rpm_version "$K8S_RPM_VERSION" \
        --arg crictl_version "$CRICTL_VERSION" \
-       '.kubernetes_semver = $k8s_semver | 
-        .kubernetes_series = $k8s_series | 
-        .kubernetes_deb_version = $k8s_deb_version | 
-        .kubernetes_rpm_version = $k8s_rpm_version | 
+       '.kubernetes_semver = $k8s_semver |
+        .kubernetes_series = $k8s_series |
+        .kubernetes_deb_version = $k8s_deb_version |
+        .kubernetes_rpm_version = $k8s_rpm_version |
         .crictl_version = $crictl_version' \
        "$AZURE_FILE" > "$AZURE_FILE.tmp" && mv "$AZURE_FILE.tmp" "$AZURE_FILE"
 
     echo "Updated Azure Kubernetes versions successfully."
     ;;
-  
+
   *)
     echo "Unknown CLOUD value: $CLOUD"
     exit 1

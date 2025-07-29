@@ -87,10 +87,9 @@ jobs:
       - name: Clean up old public AMIs
         env:
           ACCOUNT_ID: ${{ env.ACCOUNT_ID }}
+          LIVE_VERSION: "${{ steps.versions.outputs.min_k8s_version }}"
         run: |
-          LIVE_VERSION="${{ steps.versions.outputs.min_k8s_version }}"
-          REGIONS="eu-west-3 eu-west-2 eu-west-1 ca-central-1 eu-central-1 us-east-1 us-east-2 us-west-1 us-west-2 ap-southeast-2"
-          ./images/capi/scripts/clean-old-aws-ami.sh "$LIVE_VERSION" "$ACCOUNT_ID" "$REGIONS"
+          ./images/capi/scripts/clean-old-aws-ami.sh
 
   build-aws-ami:
     name: Build and Publish AMI
