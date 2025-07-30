@@ -43,13 +43,13 @@ done
 for REGION in "${!REGION_TO_AMI[@]}"; do
   AMI_ID="${REGION_TO_AMI[$REGION]}"
   echo "Disabling block public access for AMI $AMI_ID in region $REGION."
-  # aws ec2 disable-image-block-public-access --region "$REGION"
+  aws ec2 disable-image-block-public-access --region "$REGION"
   echo "Making AMI $AMI_ID public in region $REGION"
-  # aws ec2 modify-image-attribute --image-id "$AMI_ID" --launch-permission "Add=[{Group=all}]" --region "$REGION"
+  aws ec2 modify-image-attribute --image-id "$AMI_ID" --launch-permission "Add=[{Group=all}]" --region "$REGION"
 
   # Retry logic to verify AMI is public
-  MAX_RETRIES=10
-  RETRY_DELAY=20  # in seconds
+  MAX_RETRIES=${MAX_RETRIES:-10}
+  RETRY_DELAY=${RETRY_DELAY:-20}  # in seconds
   RETRY_COUNT=0
   while true; do
     PUBLIC_STATE=$(aws ec2 describe-images --region "$REGION" --image-ids "$AMI_ID" --query "Images[0].Public" --output text 2>&1) || AWS_ERROR=$?
