@@ -45,7 +45,7 @@ for REGION in "${!REGION_TO_AMI[@]}"; do
   echo "Disabling block public access for AMI $AMI_ID in region $REGION."
   aws ec2 disable-image-block-public-access --region "$REGION"
   echo "Making AMI $AMI_ID public in region $REGION"
-  aws ec2 modify-image-attribute --image-id "$AMI_ID" --launch-permission "Add=[{Group=all}]" --region "$REGION"
+  # aws ec2 modify-image-attribute --image-id "$AMI_ID" --launch-permission "Add=[{Group=all}]" --region "$REGION"
 
   # Retry logic to verify AMI is public
   MAX_RETRIES=${MAX_RETRIES:-10}

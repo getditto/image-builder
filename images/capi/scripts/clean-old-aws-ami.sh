@@ -1,35 +1,47 @@
 #!/bin/bash
+# Set strict error handling
 set -euo pipefail
 
-LIVE_VERSION="${LIVE_VERSION:-}"
-ACCOUNT_ID="${ACCOUNT_ID:-}"
-REGIONS="eu-west-3 eu-west-2 eu-west-1 ca-central-1 eu-central-1 us-east-1 us-east-2 us-west-1 us-west-2 ap-southeast-2"
-AMI_NAME_FILTER="capa-ami-ubuntu-24.04"
+# Source shared functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/functions.sh"
 
-if [[ -z "$LIVE_VERSION" || -z "$ACCOUNT_ID" ]]; then
-    echo "LIVE_VERSION and ACCOUNT_ID environment variables must be set."
-    exit 1
-fi
+# Configuration
+MAX_RESULTS=50  # Limit the number of Public AMIs returned per query to avoid excessive API calls or large result sets
+TIMEOUT=30       # Timeout in seconds for AWS calls
+AMI_NAME_FILTER="capa-ami-ubuntu-24.04"  # Default AMI name filter
+REGIONS=(eu-west-3 eu-west-2 eu-west-1 ca-central-1 eu-central-1 us-east-1 us-east-2 us-west-1 us-west-2 ap-southeast-2)
+LIVE_VERSION="${LIVE_VERSION:-1.31.8}"  # Default live version, can be overridden by user
+ACCOUNT_ID="${ACCOUNT_ID:-}"  # AWS account ID, must be set by user
+USE_PAGINATION="${USE_PAGINATION:-true}"  # Use pagination if set to true
+# Main execution
+main() {
+    # Validate all inputs first
+    validate_inputs
 
-echo "Looking for public AMIs with kubernetes_version less than $LIVE_VERSION and name containing '$AMI_NAME_FILTER' in regions: $REGIONS"
+    # echo "Using AWS region: ${REGIONS[@]}"
+    # Choose between limited or paginated approach
+    if [[ "$USE_PAGINATION" == "true" ]]; then
+        AMI_INFO=$(get_all_ami_info_paginated "${REGIONS[@]}" "$ACCOUNT_ID" "$AMI_NAME_FILTER" "$LIVE_VERSION" "$MAX_RESULTS")
 
-for REGION in $REGIONS; do
-    echo "🔎 Checking region: $REGION"
-    AMI_IDS=$(aws ec2 describe-images \
-        --owners "$ACCOUNT_ID" \
-        --filters "Name=tag:kubernetes_version,Values=*" "Name=name,Values=$AMI_NAME_FILTER*" \
-        --region "$REGION" \
-        --query "Images[?Public==\`true\`].{ID:ImageId,Version:Tags[?Key=='kubernetes_version']|[0].Value}" \
-        --output json | jq -r '.[] | [.ID, .Version] | @tsv' | awk -v live="$LIVE_VERSION" '$2 < live { print $1 }')
-
-    if [ -z "$AMI_IDS" ]; then
-        echo "✅ No outdated public AMIs found in $REGION. Skipping."
-        continue
+    else
+        AMI_INFO=$(get_ami_info "${REGIONS[@]}" "$ACCOUNT_ID" "$AMI_NAME_FILTER" "$LIVE_VERSION" "$MAX_RESULTS")
     fi
 
-    for ami in $AMI_IDS; do
-        echo "🧹 Deregistering public AMI: $ami (older than $LIVE_VERSION) in $REGION"
-        echo "Making public access to AMI: $ami in $REGION private"
-        aws ec2 modify-image-attribute --image-id "$ami" --region "$REGION" --launch-permission "Remove=[{Group=all}]"
-    done
-done
+    # Validate we got some results
+    if [[ -z "$AMI_INFO" ]]; then
+        log "No AMIs found matching the criteria."
+        exit 1
+    else
+        # Output results
+        log "Successfully retrieved AMI information: $AMI_INFO"
+    fi
+
+}
+
+# Run main function if script is executed directly
+# This check ensures the script is not being sourced, but executed as the main program.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
