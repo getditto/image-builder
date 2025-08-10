@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-      - ore/auth0_migration
-      - vignesh/fix-k8s-version
   workflow_dispatch:
     inputs:
       k8s_version:
@@ -13,8 +11,8 @@ on:
         required: false
         default: "1.31.4"
         options:
-        - "1.31.4"
-        - "1.31.5"
+          - "1.31.4"
+          - "1.31.5"
       make_public:
         description: "Include step to make AMIs public. Useful to disable when testing, so we don't pollute our public AMI list or bloat our quota limit."
         type: boolean
@@ -32,8 +30,8 @@ env:
   GCP_PROJECT_ID: "ditto-cloud-prod"
 
 permissions:
-  id-token: write   # This is crucial for OIDC authentication
-  contents: read    # Allows reading repository contents
+  id-token: write # This is crucial for OIDC authentication
+  contents: read # Allows reading repository contents
 
 jobs:
   cleanup-outdated-ami:
@@ -47,6 +45,15 @@ jobs:
           curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           chmod +x argocd
           sudo mv argocd /usr/local/bin/
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale version
+
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci,tag:github-actions,tag:repo-getditto-cloud-infra-ops,tag:use2-ops-int-dittolive-app,tag:usw2-ops-int-dittolive-app,tag:valet-vpc
 
       - name: Get live Kubernetes versions from ArgoCD
         id: versions
@@ -78,21 +85,11 @@ jobs:
           role-to-assume: "arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.ROLE }}"
 
       - name: Clean up old public AMIs
+        env:
+          ACCOUNT_ID: ${{ env.ACCOUNT_ID }}
+          LIVE_VERSION: "${{ steps.versions.outputs.min_k8s_version }}"
         run: |
-          LIVE_VERSION="${{ steps.versions.outputs.min_k8s_version }}"
-          echo "Looking for public AMIs with K8s version less than $LIVE_VERSION"
-
-          # Replace with your AMI filtering logic (using tags or naming pattern)
-          AMI_IDS=$(aws ec2 describe-images \
-            --owners self \
-            --filters "Name=tag:K8sVersion,Values=*" \
-            --query "Images[?Tags[?Key=='K8sVersion']].{ID:ImageId,Version:Tags[?Key=='K8sVersion']|[0].Value}" \
-            --output json | jq -r '.[] | select(.Version < "'"$LIVE_VERSION"'") | .ID')
-
-          for ami in $AMI_IDS; do
-            echo "🧹 Deregistering AMI: $ami (older than $LIVE_VERSION)"
-            echo "$ami"
-          done
+          ./images/capi/scripts/clean-old-aws-ami.sh
 
   build-aws-ami:
     name: Build and Publish AMI
@@ -135,11 +132,11 @@ jobs:
           make build-ami-ubuntu-2404
 
       - name: Make AMI Public
+        if: ${{ github.event.inputs.make_public == 'true' }}
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
-            ./images/capi/make_images_public.sh
-
+          ./images/capi/make_images_public.sh
   build-gcp-images:
     name: Build and Publish GCP Images
     runs-on: ubuntu-latest
@@ -150,14 +147,14 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Authenticate to GCP
-        id: 'gcp-auth'
+        id: "gcp-auth"
         uses: google-github-actions/auth@ba79af03959ebeac9769e648f473a284504d9193 # v2.1.10
         with:
-          workload_identity_provider: 'projects/1063565642885/locations/global/workloadIdentityPools/ditto-cloud-prod-workload-pool/providers/ditto-cloud-prod-gha-oidc'
-          service_account: 'github-actions@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
-          token_format: 'access_token'
+          workload_identity_provider: "projects/1063565642885/locations/global/workloadIdentityPools/ditto-cloud-prod-workload-pool/providers/ditto-cloud-prod-gha-oidc"
+          service_account: "github-actions@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+          token_format: "access_token"
           cleanup_credentials: true
-          access_token_lifetime: '3600s'
+          access_token_lifetime: "3600s"
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
@@ -186,5 +183,3 @@ jobs:
         if: ${{ github.event.inputs.make_public == 'true' }}
         run: |
           ./images/capi/make_images_public.sh
-
-
