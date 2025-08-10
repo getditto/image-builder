@@ -12,7 +12,7 @@ MAX_RESULTS=50  # Limit the number of Public AMIs returned per query to avoid ex
 TIMEOUT=30       # Timeout in seconds for AWS calls
 AMI_NAME_FILTER="capa-ami-ubuntu-24.04"  # Default AMI name filter
 REGIONS=(eu-west-3 eu-west-2 eu-west-1 ca-central-1 eu-central-1 us-east-1 us-east-2 us-west-1 us-west-2 ap-southeast-2)
-LIVE_VERSION="${LIVE_VERSION:-1.31.8}"  # Default live version, can be overridden by user
+LIVE_VERSION="${LIVE_VERSION:-1.31.4}"  # Default live version, can be overridden by user
 ACCOUNT_ID="${ACCOUNT_ID:-}"  # AWS account ID, must be set by user
 USE_PAGINATION="${USE_PAGINATION:-true}"  # Use pagination if set to true
 # Main execution
