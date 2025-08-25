@@ -125,6 +125,8 @@
       "extra_arguments": [
         "--extra-vars",
         "ansible_shell_executable=/bin/bash",
+        "--extra-vars",
+        "{{user `ansible_extra_vars`}}",
         "-b"
       ],
       "playbook_file": "{{user `patched_playbook`}}",
