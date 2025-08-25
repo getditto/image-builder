@@ -129,7 +129,7 @@
         "{{user `ansible_extra_vars`}}",
         "-b"
       ],
-      "playbook_file": "{{user `patched_playbook`}}",
+      "playbook_file": "{{user `compliance_playbook`}}",
       "type": "ansible"
     },
     {
@@ -253,8 +253,6 @@
     "volume_type": "gp3",
     "vpc_id": "",
     "oscap_file": "{{env `oscap_file`}}",
-    "patched_playbook": "/opt/ssg/scap-security-guide-0.1.76/ansible/ubuntu2404-playbook-cis_level1_server.yml"
-
-
+    "compliance_playbook": "./ansible/playbooks/noop.yml"
   }
 }
