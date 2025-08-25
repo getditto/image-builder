@@ -133,6 +133,7 @@ jobs:
 
       - name: Validate Packer template
         run: |
+          packer init -upgrade ./images/capi/packer/config.pkr.hcl
           make validate-ami-ubuntu-2404
 
       - name: Build Ubuntu AMI
@@ -180,13 +181,14 @@ jobs:
 
       - name: Validate Packer template
         run: |
-          cd images/capi
-          packer init -upgrade ./packer/config.pkr.hcl
+          packer init -upgrade ./images/capi/packer/config.pkr.hcl
           make validate-ami-flatcar
 
       - name: Build Flatcar AMI
         env:
+          AWS_PROFILE: ditto-prod-primary
           K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+          TARGET_OS: flatcar
         run: |
           ./images/capi/update_k8s_version.sh && \
           make build-ami-flatcar
@@ -196,8 +198,7 @@ jobs:
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
-          cd images/capi
-          ./make_images_public.sh
+          ./images/capi/make_images_public.sh
 
   build-gcp-ubuntu-images:
     name: Build and Publish Ubuntu GCP Images

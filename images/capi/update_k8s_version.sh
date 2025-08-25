@@ -4,6 +4,7 @@ set -euo pipefail
 
 CLOUD="${CLOUD:-aws}"
 K8S_VERSION="${K8S_VERSION:-1.31.4}"
+TARGET_OS="${TARGET_OS:-ubuntu-2404}"
 
 # Extract kubernetes series from version (e.g., "1.30.10" -> "v1.30")
 K8S_SERIES="v$(echo "$K8S_VERSION" | cut -d. -f1,2)"
@@ -30,14 +31,14 @@ echo "  crictl_version: $CRICTL_VERSION"
 case "$CLOUD" in
   aws)
     # AWS-specific block to update AWS packer file
-    AWS_FILE=$(find ./images/capi/packer/ami -name "ubuntu-2404.json" | head -n 1)
+    AWS_FILE=$(find ./images/capi/packer/ami -name "${TARGET_OS}.json" | head -n 1)
 
     if [ -z "$AWS_FILE" ]; then
-        echo "Error: ubuntu-2404.json file could not be found."
+        echo "Error: ${TARGET_OS}.json file could not be found."
         exit 1
     fi
 
-    echo "Using ubuntu-2404.json at $AWS_FILE"
+    echo "Patching packer json config at $AWS_FILE"
     echo "Updating Kubernetes versions in $AWS_FILE"
 
     # Update all kubernetes-related versions
@@ -66,14 +67,14 @@ case "$CLOUD" in
   
   gcp)
     # GCP-specific block to update GCP packer file
-    GCP_FILE=$(find ./images/capi/packer/gce -name "ubuntu-2404.json" | head -n 1)
+    GCP_FILE=$(find ./images/capi/packer/gce -name "${TARGET_OS}.json" | head -n 1)
 
     if [ -z "$GCP_FILE" ]; then
-        echo "Error: GCP ubuntu-2404.json file could not be found."
+        echo "Error: GCP ${TARGET_OS}.json file could not be found."
         exit 1
     fi
 
-    echo "Using ubuntu-2404.json at $GCP_FILE"
+    echo "Using ${TARGET_OS}.json at $GCP_FILE"
     echo "Updating Kubernetes versions in $GCP_FILE"
 
     # Update all kubernetes-related versions for GCP
@@ -94,14 +95,14 @@ case "$CLOUD" in
   
   azure)
     # Azure-specific block to update Azure packer file
-    AZURE_FILE=$(find ./images/capi/packer/azure -name "ubuntu-2404.json" | head -n 1)
+    AZURE_FILE=$(find ./images/capi/packer/azure -name "${TARGET_OS}.json" | head -n 1)
 
     if [ -z "$AZURE_FILE" ]; then
-        echo "Error: Azure ubuntu-2404.json file could not be found."
+        echo "Error: Azure ${TARGET_OS}.json file could not be found."
         exit 1
     fi
 
-    echo "Using ubuntu-2404.json at $AZURE_FILE"
+    echo "Using ${TARGET_OS}.json at $AZURE_FILE"
     echo "Updating Kubernetes versions in $AZURE_FILE"
 
     # Update all kubernetes-related versions for Azure
