@@ -9,8 +9,8 @@ TARGET_OS="${TARGET_OS:-ubuntu-2404}"
 # Extract kubernetes series from version (e.g., "1.30.10" -> "v1.30")
 K8S_SERIES="v$(echo "$K8S_VERSION" | cut -d. -f1,2)"
 
-# Set crictl version to match kubernetes version
-CRICTL_VERSION="$K8S_VERSION"
+# Set crictl version to match kubernetes minor version
+CRICTL_VERSION="$(echo "$K8S_VERSION" | cut -d. -f1,2).0"
 
 # Set deb version with package suffix
 K8S_DEB_VERSION="${K8S_VERSION}-1.1"
