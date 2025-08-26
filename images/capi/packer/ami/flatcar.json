@@ -9,7 +9,7 @@
   "distribution": "flatcar",
   "kubernetes_cni_source_type": "http",
   "kubernetes_source_type": "http",
-  "extra_playbook": "./ansible/playbooks/noop.yml",
+  "compliance_playbook": "./ansible/playbooks/noop.yml",
   "python_path": "/opt/bin/builder-env/site-packages",
   "root_device_name": "/dev/xvda",
   "ssh_username": "core",
