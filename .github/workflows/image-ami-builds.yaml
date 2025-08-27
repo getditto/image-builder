@@ -6,7 +6,6 @@ on:
       - main
       - ore/auth0_migration
       - vignesh/fix-k8s-version
-      - ditt/enable-flatcar-builds
   workflow_dispatch:
     inputs:
       k8s_version:

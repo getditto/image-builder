@@ -252,7 +252,6 @@
     "volume_size": "8",
     "volume_type": "gp3",
     "vpc_id": "",
-    "oscap_file": "{{env `oscap_file`}}",
-    "compliance_playbook": "./ansible/playbooks/noop.yml"
+    "oscap_file": "{{env `oscap_file`}}"
   }
 }
