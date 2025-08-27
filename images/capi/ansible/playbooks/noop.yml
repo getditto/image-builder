@@ -1,0 +1,7 @@
+
+- name: NoOp Ansible Playbook
+  hosts: all
+  tasks:
+  - name: This task does nothing
+    command: echo "This will never run"
+    when: false

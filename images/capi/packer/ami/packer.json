@@ -92,6 +92,7 @@
     },
     {
       "type": "shell",
+      "execute_command": "BUILD_NAME={{user `build_name`}}; if [[ \"${BUILD_NAME}\" == *\"ubuntu\"* ]]; then sudo {{.Vars}} -S -E bash '{{.Path}}'; fi",
       "inline": [
         "sudo apt-get update",
         "sudo apt-get install -y systemd-journal-remote || echo 'Package not available, will be handled by ansible'"
@@ -99,6 +100,7 @@
     }, 
     {
       "type": "shell",
+      "execute_command": "BUILD_NAME={{user `build_name`}}; if [[ \"${BUILD_NAME}\" == *\"ubuntu\"* ]]; then sudo {{.Vars}} -S -E bash '{{.Path}}'; fi",
       "inline": [
         "set -e",
         "echo 'Fixing apt Hash Sum mismatch errors...'",
@@ -123,9 +125,11 @@
       "extra_arguments": [
         "--extra-vars",
         "ansible_shell_executable=/bin/bash",
+        "--extra-vars",
+        "{{user `ansible_extra_vars`}}",
         "-b"
       ],
-      "playbook_file": "{{user `patched_playbook`}}",
+      "playbook_file": "{{user `compliance_playbook`}}",
       "type": "ansible"
     },
     {
@@ -249,8 +253,6 @@
     "volume_type": "gp3",
     "vpc_id": "",
     "oscap_file": "{{env `oscap_file`}}",
-    "patched_playbook": "/opt/ssg/scap-security-guide-0.1.76/ansible/ubuntu2404-playbook-cis_level1_server.yml"
-
-
+    "compliance_playbook": "./ansible/playbooks/noop.yml"
   }
 }

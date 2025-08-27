@@ -6,5 +6,6 @@
   "source_image_family": "ubuntu-2404-lts-amd64",
   "ssh_username": "ubuntu",
   "zone": "us-central1-a",
-  "manifest_output": "packer-manifest.json"
+  "manifest_output": "packer-manifest.json",
+  "compliance_playbook": "/opt/ssg/scap-security-guide-0.1.76/ansible/ubuntu2404-playbook-cis_level1_server.yml"
 }

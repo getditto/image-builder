@@ -6,6 +6,7 @@ on:
       - main
       - ore/auth0_migration
       - vignesh/fix-k8s-version
+      - ditt/enable-flatcar-builds
   workflow_dispatch:
     inputs:
       k8s_version:
@@ -20,6 +21,15 @@ on:
         type: boolean
         required: false
         default: false
+      build_target:
+        description: "Which images to build"
+        required: false
+        default: "all"
+        type: choice
+        options:
+        - "all"
+        - "ubuntu-only"
+        - "flatcar-only"
 
 env:
   ARGOCD_ENDPOINTS: "argocd.ops.k8s.ditto.live"
@@ -94,9 +104,10 @@ jobs:
             echo "$ami"
           done
 
-  build-aws-ami:
-    name: Build and Publish AMI
+  build-aws-ubuntu-ami:
+    name: Build and Publish Ubuntu AMI
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'ubuntu-only' || github.event.inputs.build_target == '' }}
     env:
       CLOUD: "aws"
     steps:
@@ -125,7 +136,7 @@ jobs:
           packer init -upgrade ./images/capi/packer/config.pkr.hcl
           make validate-ami-ubuntu-2404
 
-      - name: Build AMI
+      - name: Build Ubuntu AMI
         env:
           AWS_PROFILE: ditto-prod-primary
           K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
@@ -134,15 +145,66 @@ jobs:
           ./images/capi/update_k8s_version.sh && \
           make build-ami-ubuntu-2404
 
-      - name: Make AMI Public
+      - name: Make Ubuntu AMI Public
+        if: ${{ github.event.inputs.make_public == 'true' }}
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
-            ./images/capi/make_images_public.sh
 
-  build-gcp-images:
-    name: Build and Publish GCP Images
+  build-aws-flatcar-ami:
+    name: Build and Publish Flatcar AMI
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'flatcar-only' || github.event.inputs.build_target == '' }}
+    env:
+      CLOUD: "aws"
+      FLATCAR_CHANNEL: "stable"
+      FLATCAR_VERSION: "current"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up AWS
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: "arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.ROLE }}"
+          role-session-name: image-builder@build-cluster-api-images=${{ github.run_id }}
+          role-duration-seconds: 3600
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+
+      - name: Install Packer Amazon Plugin
+        run: |
+          packer plugins install github.com/hashicorp/amazon
+
+      - name: Validate Packer template
+        run: |
+          packer init -upgrade ./images/capi/packer/config.pkr.hcl
+          make validate-ami-flatcar
+
+      - name: Build Flatcar AMI
+        env:
+          AWS_PROFILE: ditto-prod-primary
+          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+          TARGET_OS: flatcar
+        run: |
+          ./images/capi/update_k8s_version.sh && \
+          make build-ami-flatcar
+
+      - name: Make Flatcar AMI Public
+        if: ${{ github.event.inputs.make_public == 'true' }}
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          ./images/capi/make_images_public.sh
+
+  build-gcp-ubuntu-images:
+    name: Build and Publish Ubuntu GCP Images
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'ubuntu-only' || github.event.inputs.build_target == '' }}
     env:
       CLOUD: "gcp"
     steps:
@@ -174,17 +236,19 @@ jobs:
           packer init -upgrade ./images/capi/packer/gce/config.pkr.hcl
           make validate-gce-ubuntu-2404
 
-      - name: Build GCP Images
+      - name: Build Ubuntu GCP Images
         env:
-          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.32.4' }}
+          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
           PKR_VAR_google_access_token: "${{ steps.gcp-auth.outputs.access_token }}"
         run: |
           ./images/capi/update_k8s_version.sh && \
           make build-gce-ubuntu-2404
 
-      - name: Make GCP Images Public
+      - name: Make Ubuntu GCP Images Public
         if: ${{ github.event.inputs.make_public == 'true' }}
         run: |
           ./images/capi/make_images_public.sh
 
-
+  # Note: GCP Flatcar builds could be added here if needed
+  # GCP doesn't have pre-built Flatcar images in the same way as AWS,
+  # so this would require a different approach
