@@ -17,6 +17,7 @@
   "kubernetes_goarch": "arm64",
   "kubernetes_source_type": "http",
   "python_path": "/opt/bin/builder-env/site-packages",
+  "manifest_output": "packer-manifest.json",
   "root_device_name": "/dev/xvda",
   "snapshot_groups": "",
   "ssh_username": "core",
