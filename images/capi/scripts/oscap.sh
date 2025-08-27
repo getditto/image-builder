@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-OSCAP_VERSION=0.1.76
+OSCAP_VERSION=0.1.77
 OSCAP_URL="https://github.com/ComplianceAsCode/content/releases/download/v${OSCAP_VERSION}/scap-security-guide-${OSCAP_VERSION}.zip"
 DEST_DIR="/opt/ssg"
 

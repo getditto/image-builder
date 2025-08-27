@@ -22,7 +22,7 @@ SHELL := /usr/bin/env bash
 
 
 # # This section is for setting up ComplianceAsCode SCAP Security Guide
-# oscap_version=0.1.76
+# oscap_version=0.1.77
 # oscap=https://github.com/ComplianceAsCode/content/releases/download/v$(oscap_version)/scap-security-guide-$(oscap_version).zip
 # export oscap_file=scap-security-guide-$(oscap_version)
 # OUT_DIR?=.
