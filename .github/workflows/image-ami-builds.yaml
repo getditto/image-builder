@@ -232,9 +232,8 @@ jobs:
 
       - name: Validate Packer template
         run: |
-          cd images/capi
-          packer init -upgrade ./packer/config.pkr.hcl
-          packer init -upgrade ./packer/gce/config.pkr.hcl
+          packer init -upgrade ./images/capi/packer/config.pkr.hcl
+          packer init -upgrade ./images/capi/packer/gce/config.pkr.hcl
           make validate-gce-ubuntu-2404
 
       - name: Build Ubuntu GCP Images
@@ -242,15 +241,13 @@ jobs:
           K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
           PKR_VAR_google_access_token: "${{ steps.gcp-auth.outputs.access_token }}"
         run: |
-          cd images/capi
-          ./update_k8s_version.sh && \
+          ./images/capi/update_k8s_version.sh && \
           make build-gce-ubuntu-2404
 
       - name: Make Ubuntu GCP Images Public
         if: ${{ github.event.inputs.make_public == 'true' }}
         run: |
-          cd images/capi
-          ./make_images_public.sh
+          ./images/capi/make_images_public.sh
 
   # Note: GCP Flatcar builds could be added here if needed
   # GCP doesn't have pre-built Flatcar images in the same way as AWS,
