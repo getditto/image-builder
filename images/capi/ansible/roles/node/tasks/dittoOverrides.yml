@@ -1,0 +1,6 @@
+---
+- name: Install latest sudo package for requested CVE patches
+  apt:
+    name: sudo
+    state: latest
+    update_cache: true
