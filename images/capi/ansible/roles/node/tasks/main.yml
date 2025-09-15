@@ -120,7 +120,16 @@
     backrefs: true
     regexp: ^(?!.*transparent_hugepage=madvise)(GRUB_CMDLINE_LINUX=.*)("$)
     line: \1 transparent_hugepage=madvise"
-  when: ansible_os_family == "RedHat"
+  when: ansible_os_family in ["RedHat", "Debian", "VMware Photon OS", "Common Base Linux Mariner", "Microsoft Azure Linux"]
+  notify: Update grub
+
+- name: Set transparent huge pages to madvise (Flatcar)
+  ansible.builtin.lineinfile:
+    path: /usr/share/oem/grub.cfg
+    backrefs: true
+    regexp: ^(?!.*transparent_hugepage=madvise)(set linux_append=.*)("$)
+    line: \1 transparent_hugepage=madvise"
+  when: ansible_os_family == "Flatcar"
 
 - name: Copy udev etcd network tuning rules
   ansible.builtin.template:
