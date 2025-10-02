@@ -11,10 +11,7 @@ on:
       k8s_version:
         description: "Specify the Kubernetes version"
         required: false
-        default: "1.31.4"
-        options:
-        - "1.31.4"
-        - "1.31.5"
+        default: "1.31.13"
       make_public:
         description: "Include step to make AMIs public. Useful to disable when testing, so we don't pollute our public AMI list or bloat our quota limit."
         type: boolean
@@ -138,7 +135,7 @@ jobs:
       - name: Build Ubuntu AMI
         env:
           AWS_PROFILE: ditto-prod-primary
-          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+          K8S_VERSION: ${{ github.event.inputs.k8s_version }}
         run: |
           AWS_REGION=${{ env.AWS_REGION }} \
           ./images/capi/update_k8s_version.sh && \
@@ -191,6 +188,7 @@ jobs:
       - name: Build Flatcar AMI
         env:
           AWS_PROFILE: ditto-prod-primary
+          K8S_VERSION: ${{ github.event.inputs.k8s_version }}
           TARGET_OS: flatcar
         run: |
           ./images/capi/update_k8s_version.sh && \
@@ -244,7 +242,7 @@ jobs:
 
       - name: Build Ubuntu GCP Images
         env:
-          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+          K8S_VERSION: ${{ github.event.inputs.k8s_version }}
           PKR_VAR_google_access_token: "${{ steps.gcp-auth.outputs.access_token }}"
         run: |
           ./images/capi/update_k8s_version.sh && \
