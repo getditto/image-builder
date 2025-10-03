@@ -11,10 +11,7 @@ on:
       k8s_version:
         description: "Specify the Kubernetes version"
         required: false
-        default: "1.31.4"
-        options:
-        - "1.31.4"
-        - "1.31.5"
+        default: "1.31.13"
       make_public:
         description: "Include step to make AMIs public. Useful to disable when testing, so we don't pollute our public AMI list or bloat our quota limit."
         type: boolean
@@ -138,7 +135,7 @@ jobs:
       - name: Build Ubuntu AMI
         env:
           AWS_PROFILE: ditto-prod-primary
-          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+          K8S_VERSION: ${{ github.event.inputs.k8s_version }}
         run: |
           AWS_REGION=${{ env.AWS_REGION }} \
           ./images/capi/update_k8s_version.sh && \
@@ -151,9 +148,13 @@ jobs:
         run: |
 
   build-aws-flatcar-ami:
-    name: Build and Publish Flatcar AMI
+    name: Build and Publish Flatcar AMI (${{ matrix.arch }})
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'flatcar-only' || github.event.inputs.build_target == '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
     env:
       CLOUD: "aws"
       FLATCAR_CHANNEL: "stable"
@@ -187,11 +188,15 @@ jobs:
       - name: Build Flatcar AMI
         env:
           AWS_PROFILE: ditto-prod-primary
-          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+          K8S_VERSION: ${{ github.event.inputs.k8s_version }}
           TARGET_OS: flatcar
         run: |
           ./images/capi/update_k8s_version.sh && \
-          make build-ami-flatcar
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            make build-ami-flatcar
+          else
+            make build-ami-flatcar-${{ matrix.arch }}
+          fi
 
       - name: Make Flatcar AMI Public
         if: ${{ github.event.inputs.make_public == 'true' }}
@@ -237,7 +242,7 @@ jobs:
 
       - name: Build Ubuntu GCP Images
         env:
-          K8S_VERSION: ${{ github.event.inputs.k8s_version || '1.31.4' }}
+          K8S_VERSION: ${{ github.event.inputs.k8s_version }}
           PKR_VAR_google_access_token: "${{ steps.gcp-auth.outputs.access_token }}"
         run: |
           ./images/capi/update_k8s_version.sh && \
