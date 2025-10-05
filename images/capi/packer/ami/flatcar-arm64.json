@@ -3,6 +3,7 @@
   "ami_filter_name": "Flatcar*{{env `FLATCAR_CHANNEL`}}*{{env `FLATCAR_VERSION`}}*",
   "ami_filter_owners": "075585003325",
   "ami_groups": "",
+  "ami_regions": "eu-west-3,eu-west-2,eu-west-1,ca-central-1,eu-central-1,us-east-1,us-east-2,us-west-1,us-west-2,ap-southeast-2",
   "ansible_extra_vars": "ansible_python_interpreter=/opt/bin/python",
   "arch": "arm64",
   "build_name": "flatcar-{{env `FLATCAR_CHANNEL`}}",
