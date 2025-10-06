@@ -3,8 +3,9 @@
 set -euo pipefail
 
 CLOUD="${CLOUD:-aws}"
-K8S_VERSION="${K8S_VERSION:-1.31.4}"
+K8S_VERSION="${K8S_VERSION:-1.31.13}"
 TARGET_OS="${TARGET_OS:-ubuntu-2404}"
+TARGET_ARCH="${TARGET_ARCH:-amd64}"
 
 # Extract kubernetes series from version (e.g., "1.30.10" -> "v1.30")
 K8S_SERIES="v$(echo "$K8S_VERSION" | cut -d. -f1,2)"
@@ -31,7 +32,12 @@ echo "  crictl_version: $CRICTL_VERSION"
 case "$CLOUD" in
   aws)
     # AWS-specific block to update AWS packer file
-    AWS_FILE=$(find ./images/capi/packer/ami -name "${TARGET_OS}.json" | head -n 1)
+    if [ "$TARGET_ARCH" = "arm64" ] && [ "$TARGET_OS" = "flatcar" ]; then
+      # special case for flatcar arm64
+      AWS_FILE=$(find ./images/capi/packer/ami -name "${TARGET_OS}-arm64.json" | head -n 1)
+    else
+      AWS_FILE=$(find ./images/capi/packer/ami -name "${TARGET_OS}.json" | head -n 1)
+    fi
 
     if [ -z "$AWS_FILE" ]; then
         echo "Error: ${TARGET_OS}.json file could not be found."
