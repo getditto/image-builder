@@ -113,14 +113,7 @@ func initialModel(trees []AMITree, cfg aws.Config, ctx context.Context) model {
 		updateChan: make(chan tea.Msg),
 	}
 
-	// Auto-expand trees that have children
-	for i, tree := range trees {
-		if len(tree.Children) > 0 {
-			treeID := fmt.Sprintf("%d", i)
-			m.expanded[treeID] = true
-		}
-	}
-
+	// Start with all trees collapsed
 	m.rebuildItems()
 	return m
 }
@@ -437,47 +430,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-		case "A":
-			// Select/deselect all public AMIs
-			if !m.updating {
-				allSelected := true
-				for _, tree := range m.trees {
-					if tree.Root.Status == StatusPublic {
-						rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
-						if !m.selected[rootKey] {
-							allSelected = false
-							break
-						}
-					}
-					for _, child := range tree.Children {
-						if child.Status == StatusPublic {
-							childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
-							if !m.selected[childKey] {
-								allSelected = false
-								break
-							}
-						}
-					}
-				}
-
-				if allSelected {
-					m.selected = make(map[string]bool)
-				} else {
-					for _, tree := range m.trees {
-						if tree.Root.Status == StatusPublic {
-							rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
-							m.selected[rootKey] = true
-						}
-						for _, child := range tree.Children {
-							if child.Status == StatusPublic {
-								childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
-								m.selected[childKey] = true
-							}
-						}
-					}
-				}
-			}
-
 		case "e":
 			// Expand all
 			if !m.updating {
@@ -767,7 +719,6 @@ func (m model) View() string {
 			"  Space/Enter    : Expand/collapse tree or toggle selection",
 			"  s              : Toggle selection (without expanding)",
 			"  a              : Toggle all in current tree",
-			"  A              : Toggle all AMIs",
 			"  e              : Expand all trees",
 			"  x              : Collapse all trees",
 			"  p              : Toggle hide private AMIs",
