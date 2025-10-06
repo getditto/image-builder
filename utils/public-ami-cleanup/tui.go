@@ -20,6 +20,7 @@ type model struct {
 	config       aws.Config
 	ctx          context.Context
 	showHelp     bool
+	hidePrivate  bool        // Hide private AMIs (except roots with public children)
 	items        []listItem  // Flattened list of visible items for navigation
 	viewport     int         // Starting index of visible items
 	height       int         // Terminal height
@@ -128,6 +129,22 @@ func (m *model) rebuildItems() {
 	m.items = []listItem{}
 
 	for treeIdx, tree := range m.trees {
+		// Check if tree has public children
+		hasPublicChildren := false
+		if m.hidePrivate {
+			for _, child := range tree.Children {
+				if child.Status == StatusPublic {
+					hasPublicChildren = true
+					break
+				}
+			}
+		}
+
+		// Skip private root AMIs unless they have public children
+		if m.hidePrivate && tree.Root.Status == StatusPrivate && !hasPublicChildren {
+			continue
+		}
+
 		// Add the root item
 		m.items = append(m.items, listItem{
 			isTree:  true,
@@ -142,6 +159,11 @@ func (m *model) rebuildItems() {
 		treeID := fmt.Sprintf("%d", treeIdx)
 		if m.expanded[treeID] && len(tree.Children) > 0 {
 			for _, child := range tree.Children {
+				// Skip private children when hidePrivate is enabled
+				if m.hidePrivate && child.Status == StatusPrivate {
+					continue
+				}
+
 				m.items = append(m.items, listItem{
 					isTree:   false,
 					ami:      child,
@@ -501,6 +523,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, listenForUpdates(m.updateChan)
 			}
 
+		case "p":
+			if !m.updating {
+				m.hidePrivate = !m.hidePrivate
+				m.rebuildItems()
+				// Adjust cursor if needed
+				if m.cursor >= len(m.items) && len(m.items) > 0 {
+					m.cursor = len(m.items) - 1
+				}
+				m.updateViewport()
+			}
+
 		case "h", "?":
 			m.showHelp = !m.showHelp
 			m.updateViewport()
@@ -737,6 +770,7 @@ func (m model) View() string {
 			"  A              : Toggle all AMIs",
 			"  e              : Expand all trees",
 			"  x              : Collapse all trees",
+			"  p              : Toggle hide private AMIs",
 			"  c              : Confirm and make private",
 			"  h/?            : Toggle help",
 			"  q/Ctrl+C       : Quit",
