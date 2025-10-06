@@ -26,13 +26,14 @@ const (
 )
 
 type AMI struct {
-	ID          string
-	Name        string
-	Region      string
-	CreatedDate time.Time
-	Status      AMIStatus
-	CopiedFrom  string
-	ErrorMsg    string
+	ID           string
+	Name         string
+	Region       string
+	CreatedDate  time.Time
+	Status       AMIStatus
+	CopiedFrom   string
+	ErrorMsg     string
+	Architecture string
 }
 
 type AMITree struct {
@@ -142,11 +143,12 @@ func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 			}
 
 			ami := AMI{
-				ID:          aws.ToString(image.ImageId),
-				Name:        aws.ToString(image.Name),
-				Region:      region,
-				CreatedDate: createdDate,
-				Status:      status,
+				ID:           aws.ToString(image.ImageId),
+				Name:         aws.ToString(image.Name),
+				Region:       region,
+				CreatedDate:  createdDate,
+				Status:       status,
+				Architecture: string(image.Architecture),
 			}
 
 			// Try to find source AMI from tags

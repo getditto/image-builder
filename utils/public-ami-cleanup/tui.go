@@ -641,7 +641,7 @@ func (m model) View() string {
 			// Format date as YYYY-MM-DD HH:MM:SS
 			dateStr := item.ami.CreatedDate.Format("2006-01-02 15:04:05")
 
-			line = fmt.Sprintf("%s%s%s %s %s %s (%s) %s %s",
+			line = fmt.Sprintf("%s%s%s %s %s %s (%s) %-7s %s %s",
 				prefix,
 				indent,
 				expandIcon,
@@ -649,6 +649,7 @@ func (m model) View() string {
 				name,
 				amiIDStyle.Render(item.ami.ID),
 				regionStyle.Render(item.ami.Region),
+				item.ami.Architecture,
 				dateStyle.Render(dateStr),
 				statusStr)
 
@@ -681,13 +682,14 @@ func (m model) View() string {
 			// Format date as YYYY-MM-DD HH:MM:SS
 			dateStr := item.ami.CreatedDate.Format("2006-01-02 15:04:05")
 
-			line = fmt.Sprintf("%s%s%s %s %s (%s) %s %s",
+			line = fmt.Sprintf("%s%s%s %s %s (%s) %-7s %s %s",
 				prefix,
 				indent,
 				connector,
 				selectIcon,
 				amiIDStyle.Render(item.ami.ID),
 				regionStyle.Render(item.ami.Region),
+				item.ami.Architecture,
 				dateStyle.Render(dateStr),
 				statusStr)
 
