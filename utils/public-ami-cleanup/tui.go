@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,18 +12,23 @@ import (
 )
 
 type model struct {
-	trees      []AMITree
-	cursor     int
-	selected   map[string]bool
-	expanded   map[string]bool
-	confirmed  bool
-	quitting   bool
-	config     aws.Config
-	showHelp   bool
-	items      []listItem  // Flattened list of visible items for navigation
-	viewport   int         // Starting index of visible items
-	height     int         // Terminal height
-	width      int         // Terminal width
+	trees        []AMITree
+	cursor       int
+	selected     map[string]bool
+	expanded     map[string]bool
+	quitting     bool
+	config       aws.Config
+	ctx          context.Context
+	showHelp     bool
+	items        []listItem  // Flattened list of visible items for navigation
+	viewport     int         // Starting index of visible items
+	height       int         // Terminal height
+	width        int         // Terminal width
+	updating     bool        // Are we currently updating AMIs?
+	updateStatus string      // Status message for updates
+	updateChan   chan tea.Msg
+	statusMsg    string      // General status message
+	errorMsg     string      // Error message
 }
 
 type listItem struct {
@@ -66,27 +72,44 @@ var (
 			Foreground(lipgloss.Color("196")).
 			Bold(true)
 
+	privateStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("34")).
+			Bold(true)
+
+	updatingStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("226")).
+			Bold(true)
+
+	errorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("196")).
+			Bold(true)
+
 	scrollStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240"))
 
 	dateStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("245"))
+
+	statusStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("42"))
 )
 
-func initialModel(trees []AMITree, cfg aws.Config) model {
+func initialModel(trees []AMITree, cfg aws.Config, ctx context.Context) model {
 	// Sort trees by name
 	sort.Slice(trees, func(i, j int) bool {
 		return trees[i].Root.Name < trees[j].Root.Name
 	})
 
 	m := model{
-		trees:    trees,
-		selected: make(map[string]bool),
-		expanded: make(map[string]bool),
-		config:   cfg,
-		showHelp: true,
-		height:   24, // Default height, will be updated
-		width:    80, // Default width, will be updated
+		trees:      trees,
+		selected:   make(map[string]bool),
+		expanded:   make(map[string]bool),
+		config:     cfg,
+		ctx:        ctx,
+		showHelp:   true,
+		height:     24, // Default height, will be updated
+		width:      80, // Default width, will be updated
+		updateChan: make(chan tea.Msg),
 	}
 
 	// Auto-expand trees that have children
@@ -133,11 +156,10 @@ func (m *model) rebuildItems() {
 
 func (m *model) updateViewport() {
 	// Calculate the available height for items
-	// Account for header (4 lines), help text, and padding
-	headerLines := 5
+	headerLines := 7 // Increased for status messages
 	helpLines := 1
 	if m.showHelp {
-		helpLines = 11
+		helpLines = 14
 	}
 	availableHeight := m.height - headerLines - helpLines - 2
 
@@ -165,8 +187,17 @@ func (m *model) updateViewport() {
 	}
 }
 
+func listenForUpdates(sub chan tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		return <-sub
+	}
+}
+
 func (m model) Init() tea.Cmd {
-	return tea.EnterAltScreen
+	return tea.Batch(
+		tea.EnterAltScreen,
+		listenForUpdates(m.updateChan),
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -176,52 +207,114 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.updateViewport()
 
+	case amiUpdateStartMsg:
+		// Mark AMI as updating
+		for i := range m.trees {
+			if m.trees[i].Root.Region+":"+m.trees[i].Root.ID == msg.amiKey {
+				m.trees[i].Root.Status = StatusUpdating
+			}
+			for j := range m.trees[i].Children {
+				if m.trees[i].Children[j].Region+":"+m.trees[i].Children[j].ID == msg.amiKey {
+					m.trees[i].Children[j].Status = StatusUpdating
+				}
+			}
+		}
+		return m, listenForUpdates(m.updateChan)
+
+	case amiUpdateSuccessMsg:
+		// Mark AMI as private
+		for i := range m.trees {
+			if m.trees[i].Root.Region+":"+m.trees[i].Root.ID == msg.amiKey {
+				m.trees[i].Root.Status = StatusPrivate
+				delete(m.selected, msg.amiKey)
+			}
+			for j := range m.trees[i].Children {
+				if m.trees[i].Children[j].Region+":"+m.trees[i].Children[j].ID == msg.amiKey {
+					m.trees[i].Children[j].Status = StatusPrivate
+					delete(m.selected, msg.amiKey)
+				}
+			}
+		}
+		m.statusMsg = fmt.Sprintf("✓ Made %s private", msg.amiKey)
+		return m, listenForUpdates(m.updateChan)
+
+	case amiUpdateErrorMsg:
+		// Mark AMI as error
+		for i := range m.trees {
+			if m.trees[i].Root.Region+":"+m.trees[i].Root.ID == msg.amiKey {
+				m.trees[i].Root.Status = StatusError
+				m.trees[i].Root.ErrorMsg = msg.err.Error()
+			}
+			for j := range m.trees[i].Children {
+				if m.trees[i].Children[j].Region+":"+m.trees[i].Children[j].ID == msg.amiKey {
+					m.trees[i].Children[j].Status = StatusError
+					m.trees[i].Children[j].ErrorMsg = msg.err.Error()
+				}
+			}
+		}
+		m.errorMsg = fmt.Sprintf("✗ Failed to update %s: %v", msg.amiKey, msg.err)
+		return m, listenForUpdates(m.updateChan)
+
+	case allUpdatesCompleteMsg:
+		m.updating = false
+		m.updateStatus = "✓ All updates complete!"
+		return m, nil
+
 	case tea.KeyMsg:
+		// Clear error message on any key press
+		m.errorMsg = ""
+
 		switch msg.String() {
 		case "q", "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
 
 		case "up", "k":
-			if m.cursor > 0 {
+			if m.cursor > 0 && !m.updating {
 				m.cursor--
 				m.updateViewport()
 			}
 
 		case "down", "j":
-			if m.cursor < len(m.items)-1 {
+			if m.cursor < len(m.items)-1 && !m.updating {
 				m.cursor++
 				m.updateViewport()
 			}
 
 		case "pgup":
-			// Move up by half a page
-			pageSize := (m.height - 10) / 2
-			m.cursor -= pageSize
-			if m.cursor < 0 {
-				m.cursor = 0
+			if !m.updating {
+				pageSize := (m.height - 10) / 2
+				m.cursor -= pageSize
+				if m.cursor < 0 {
+					m.cursor = 0
+				}
+				m.updateViewport()
 			}
-			m.updateViewport()
 
 		case "pgdn":
-			// Move down by half a page
-			pageSize := (m.height - 10) / 2
-			m.cursor += pageSize
-			if m.cursor >= len(m.items) {
-				m.cursor = len(m.items) - 1
+			if !m.updating {
+				pageSize := (m.height - 10) / 2
+				m.cursor += pageSize
+				if m.cursor >= len(m.items) {
+					m.cursor = len(m.items) - 1
+				}
+				m.updateViewport()
 			}
-			m.updateViewport()
 
 		case "home", "g":
-			m.cursor = 0
-			m.updateViewport()
+			if !m.updating {
+				m.cursor = 0
+				m.updateViewport()
+			}
 
 		case "end", "G":
-			m.cursor = len(m.items) - 1
-			m.updateViewport()
+			if !m.updating {
+				m.cursor = len(m.items) - 1
+				m.updateViewport()
+			}
 
 		case " ", "enter":
-			if m.cursor < len(m.items) {
+			if m.cursor < len(m.items) && !m.updating {
 				item := m.items[m.cursor]
 				if item.isTree && len(item.tree.Children) > 0 {
 					// Toggle expand/collapse
@@ -233,8 +326,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.cursor = len(m.items) - 1
 					}
 					m.updateViewport()
-				} else if item.ami != nil {
-					// Toggle selection
+				} else if item.ami != nil && item.ami.Status == StatusPublic {
+					// Toggle selection only for public AMIs
 					key := fmt.Sprintf("%s:%s", item.ami.Region, item.ami.ID)
 					if m.selected[key] {
 						delete(m.selected, key)
@@ -246,9 +339,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "s":
 			// Toggle selection without expanding/collapsing
-			if m.cursor < len(m.items) {
+			if m.cursor < len(m.items) && !m.updating {
 				item := m.items[m.cursor]
-				if item.ami != nil {
+				if item.ami != nil && item.ami.Status == StatusPublic {
 					key := fmt.Sprintf("%s:%s", item.ami.Region, item.ami.ID)
 					if m.selected[key] {
 						delete(m.selected, key)
@@ -260,7 +353,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "a":
 			// Select/deselect all items in current tree
-			if m.cursor < len(m.items) {
+			if m.cursor < len(m.items) && !m.updating {
 				item := m.items[m.cursor]
 				var tree *AMITree
 
@@ -268,104 +361,144 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					tree = item.tree
 				} else if item.isChild {
 					// Find parent tree
-					for _, t := range m.trees {
-						if t.Root.ID == item.parentID {
-							tree = &t
+					for i := range m.trees {
+						if m.trees[i].Root.ID == item.parentID {
+							tree = &m.trees[i]
 							break
 						}
 					}
 				}
 
 				if tree != nil {
-					// Check if all are selected
+					// Check if all public AMIs are selected
 					allSelected := true
-					rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
-					if !m.selected[rootKey] {
-						allSelected = false
+					if tree.Root.Status == StatusPublic {
+						rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
+						if !m.selected[rootKey] {
+							allSelected = false
+						}
 					}
 					for _, child := range tree.Children {
-						childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
-						if !m.selected[childKey] {
-							allSelected = false
-							break
+						if child.Status == StatusPublic {
+							childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
+							if !m.selected[childKey] {
+								allSelected = false
+								break
+							}
 						}
 					}
 
 					// Toggle
 					if allSelected {
-						delete(m.selected, rootKey)
+						if tree.Root.Status == StatusPublic {
+							rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
+							delete(m.selected, rootKey)
+						}
 						for _, child := range tree.Children {
-							childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
-							delete(m.selected, childKey)
+							if child.Status == StatusPublic {
+								childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
+								delete(m.selected, childKey)
+							}
 						}
 					} else {
-						m.selected[rootKey] = true
+						if tree.Root.Status == StatusPublic {
+							rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
+							m.selected[rootKey] = true
+						}
 						for _, child := range tree.Children {
-							childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
-							m.selected[childKey] = true
+							if child.Status == StatusPublic {
+								childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
+								m.selected[childKey] = true
+							}
 						}
 					}
 				}
 			}
 
 		case "A":
-			// Select/deselect all AMIs
-			allSelected := true
-			for _, tree := range m.trees {
-				rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
-				if !m.selected[rootKey] {
-					allSelected = false
-					break
-				}
-				for _, child := range tree.Children {
-					childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
-					if !m.selected[childKey] {
-						allSelected = false
-						break
+			// Select/deselect all public AMIs
+			if !m.updating {
+				allSelected := true
+				for _, tree := range m.trees {
+					if tree.Root.Status == StatusPublic {
+						rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
+						if !m.selected[rootKey] {
+							allSelected = false
+							break
+						}
+					}
+					for _, child := range tree.Children {
+						if child.Status == StatusPublic {
+							childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
+							if !m.selected[childKey] {
+								allSelected = false
+								break
+							}
+						}
 					}
 				}
-			}
 
-			if allSelected {
-				m.selected = make(map[string]bool)
-			} else {
-				for _, tree := range m.trees {
-					rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
-					m.selected[rootKey] = true
-					for _, child := range tree.Children {
-						childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
-						m.selected[childKey] = true
+				if allSelected {
+					m.selected = make(map[string]bool)
+				} else {
+					for _, tree := range m.trees {
+						if tree.Root.Status == StatusPublic {
+							rootKey := fmt.Sprintf("%s:%s", tree.Root.Region, tree.Root.ID)
+							m.selected[rootKey] = true
+						}
+						for _, child := range tree.Children {
+							if child.Status == StatusPublic {
+								childKey := fmt.Sprintf("%s:%s", child.Region, child.ID)
+								m.selected[childKey] = true
+							}
+						}
 					}
 				}
 			}
 
 		case "e":
 			// Expand all
-			for i := range m.trees {
-				if len(m.trees[i].Children) > 0 {
-					treeID := fmt.Sprintf("%d", i)
-					m.expanded[treeID] = true
+			if !m.updating {
+				for i := range m.trees {
+					if len(m.trees[i].Children) > 0 {
+						treeID := fmt.Sprintf("%d", i)
+						m.expanded[treeID] = true
+					}
 				}
+				m.rebuildItems()
+				m.updateViewport()
 			}
-			m.rebuildItems()
-			m.updateViewport()
 
 		case "x":
 			// Collapse all
-			for i := range m.trees {
-				treeID := fmt.Sprintf("%d", i)
-				m.expanded[treeID] = false
+			if !m.updating {
+				for i := range m.trees {
+					treeID := fmt.Sprintf("%d", i)
+					m.expanded[treeID] = false
+				}
+				m.rebuildItems()
+				if m.cursor >= len(m.items) {
+					m.cursor = len(m.items) - 1
+				}
+				m.updateViewport()
 			}
-			m.rebuildItems()
-			if m.cursor >= len(m.items) {
-				m.cursor = len(m.items) - 1
-			}
-			m.updateViewport()
 
 		case "c":
-			if len(m.selected) > 0 {
-				m.confirmed = true
-				return m, tea.Quit
+			if len(m.selected) > 0 && !m.updating {
+				// Start the update process
+				m.updating = true
+				m.updateStatus = fmt.Sprintf("Updating %d AMI(s)...", len(m.selected))
+				m.statusMsg = ""
+
+				// Collect selected AMI keys
+				selectedKeys := make([]string, 0, len(m.selected))
+				for key := range m.selected {
+					selectedKeys = append(selectedKeys, key)
+				}
+
+				// Start background updates
+				go makeAMIsPrivate(m.ctx, m.config, selectedKeys, m.updateChan)
+				return m, listenForUpdates(m.updateChan)
 			}
 
 		case "h", "?":
@@ -389,13 +522,43 @@ func (m model) View() string {
 	s.WriteString("\n")
 
 	totalAMIs := 0
+	publicCount := 0
+	privateCount := 0
 	for _, tree := range m.trees {
 		totalAMIs++
-		totalAMIs += len(tree.Children)
+		switch tree.Root.Status {
+		case StatusPublic:
+			publicCount++
+		case StatusPrivate:
+			privateCount++
+		}
+		for _, child := range tree.Children {
+			totalAMIs++
+			switch child.Status {
+			case StatusPublic:
+				publicCount++
+			case StatusPrivate:
+				privateCount++
+			}
+		}
 	}
 
-	s.WriteString(fmt.Sprintf("Found %d public AMIs with prefix 'capa-ami-'\n", totalAMIs))
-	s.WriteString(fmt.Sprintf("Selected: %d AMIs\n", len(m.selected)))
+	s.WriteString(fmt.Sprintf("Total: %d AMIs | Public: %d | Private: %d | Selected: %d\n",
+		totalAMIs, publicCount, privateCount, len(m.selected)))
+
+	// Status messages
+	if m.updateStatus != "" {
+		s.WriteString(statusStyle.Render(m.updateStatus))
+		s.WriteString("\n")
+	}
+	if m.statusMsg != "" {
+		s.WriteString(statusStyle.Render(m.statusMsg))
+		s.WriteString("\n")
+	}
+	if m.errorMsg != "" {
+		s.WriteString(errorStyle.Render(m.errorMsg))
+		s.WriteString("\n")
+	}
 
 	// Show scroll position if needed
 	if len(m.items) > 0 {
@@ -429,12 +592,27 @@ func (m model) View() string {
 		indent := strings.Repeat("  ", item.indent)
 
 		// Selection indicator
-		selectIcon := "[ ]"
-		if item.ami != nil {
+		selectIcon := "   "
+		if item.ami != nil && item.ami.Status == StatusPublic {
 			key := fmt.Sprintf("%s:%s", item.ami.Region, item.ami.ID)
 			if m.selected[key] {
 				selectIcon = selectedStyle.Render("[✓]")
+			} else {
+				selectIcon = "[ ]"
 			}
+		}
+
+		// Status indicator
+		statusStr := ""
+		switch item.ami.Status {
+		case StatusPublic:
+			statusStr = publicStyle.Render("[PUBLIC]")
+		case StatusPrivate:
+			statusStr = privateStyle.Render("[PRIVATE]")
+		case StatusUpdating:
+			statusStr = updatingStyle.Render("[UPDATING...]")
+		case StatusError:
+			statusStr = errorStyle.Render("[ERROR]")
 		}
 
 		// Build the line
@@ -452,7 +630,7 @@ func (m model) View() string {
 			}
 
 			name := item.ami.Name
-			maxNameLen := m.width - 80
+			maxNameLen := m.width - 85
 			if maxNameLen < 20 {
 				maxNameLen = 20
 			}
@@ -472,10 +650,14 @@ func (m model) View() string {
 				amiIDStyle.Render(item.ami.ID),
 				regionStyle.Render(item.ami.Region),
 				dateStyle.Render(dateStr),
-				publicStyle.Render("[PUBLIC]"))
+				statusStr)
 
 			if len(item.tree.Children) > 0 {
 				line += fmt.Sprintf(" (%d copies)", len(item.tree.Children))
+			}
+
+			if item.ami.Status == StatusError && item.ami.ErrorMsg != "" {
+				line += fmt.Sprintf(" %s", errorStyle.Render(item.ami.ErrorMsg))
 			}
 		} else {
 			// Child AMI
@@ -507,7 +689,11 @@ func (m model) View() string {
 				amiIDStyle.Render(item.ami.ID),
 				regionStyle.Render(item.ami.Region),
 				dateStyle.Render(dateStr),
-				publicStyle.Render("[PUBLIC]"))
+				statusStr)
+
+			if item.ami.Status == StatusError && item.ami.ErrorMsg != "" {
+				line += fmt.Sprintf(" %s", errorStyle.Render(item.ami.ErrorMsg))
+			}
 		}
 
 		// Truncate line if too long
@@ -544,6 +730,9 @@ func (m model) View() string {
 			"  h/?            : Toggle help",
 			"  q/Ctrl+C       : Quit",
 		}
+		if m.updating {
+			help = append(help, "", updatingStyle.Render("Updates in progress..."))
+		}
 		s.WriteString(helpStyle.Render(strings.Join(help, "\n")))
 	} else {
 		s.WriteString(helpStyle.Render("\nPress h or ? for help"))
@@ -554,11 +743,11 @@ func (m model) View() string {
 
 func (m model) getVisibleItemCount() int {
 	// Calculate the available height for items
-	headerLines := 5
+	headerLines := 7
 	helpLines := 1
 	scrollIndicators := 2
 	if m.showHelp {
-		helpLines = 14
+		helpLines = 16
 	}
 	availableHeight := m.height - headerLines - helpLines - scrollIndicators - 1
 

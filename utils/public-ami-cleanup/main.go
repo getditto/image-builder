@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -13,7 +14,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/fatih/color"
+)
+
+type AMIStatus string
+
+const (
+	StatusPublic   AMIStatus = "PUBLIC"
+	StatusPrivate  AMIStatus = "PRIVATE"
+	StatusUpdating AMIStatus = "UPDATING"
+	StatusError    AMIStatus = "ERROR"
 )
 
 type AMI struct {
@@ -21,14 +30,31 @@ type AMI struct {
 	Name        string
 	Region      string
 	CreatedDate time.Time
-	IsPublic    bool
+	Status      AMIStatus
 	CopiedFrom  string
+	ErrorMsg    string
 }
 
 type AMITree struct {
 	Root     *AMI
 	Children []*AMI
 }
+
+// Messages for tea
+type amiUpdateStartMsg struct {
+	amiKey string
+}
+
+type amiUpdateSuccessMsg struct {
+	amiKey string
+}
+
+type amiUpdateErrorMsg struct {
+	amiKey string
+	err    error
+}
+
+type allUpdatesCompleteMsg struct{}
 
 var regions = []string{
 	"us-east-1",
@@ -71,14 +97,10 @@ func runApp() error {
 
 	trees := buildAMITrees(amis)
 
-	p := tea.NewProgram(initialModel(trees, cfg))
-	finalModel, err := p.Run()
+	p := tea.NewProgram(initialModel(trees, cfg, ctx))
+	_, err = p.Run()
 	if err != nil {
 		return fmt.Errorf("error running program: %v", err)
-	}
-
-	if m, ok := finalModel.(model); ok && m.confirmed {
-		return makeAMIsPrivate(ctx, cfg, m.selected)
 	}
 
 	return nil
@@ -121,7 +143,7 @@ func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 				Name:        aws.ToString(image.Name),
 				Region:      region,
 				CreatedDate: createdDate,
-				IsPublic:    aws.ToBool(image.Public),
+				Status:      StatusPublic,
 			}
 
 			for _, tag := range image.Tags {
@@ -232,26 +254,37 @@ func buildAMITrees(amis []AMI) []AMITree {
 	return result
 }
 
-func makeAMIsPrivate(ctx context.Context, cfg aws.Config, selectedAMIs map[string]bool) error {
-	fmt.Println("\nMaking selected AMIs private...")
+func makeAMIsPrivate(ctx context.Context, cfg aws.Config, selectedAMIs []string, updateChan chan<- tea.Msg) {
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 5) // Limit concurrent updates
 
-	amisByRegion := make(map[string][]string)
+	for _, amiKey := range selectedAMIs {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 
-	for amiID := range selectedAMIs {
-		parts := strings.Split(amiID, ":")
-		if len(parts) == 2 {
+			parts := strings.Split(key, ":")
+			if len(parts) != 2 {
+				updateChan <- amiUpdateErrorMsg{
+					amiKey: key,
+					err:    fmt.Errorf("invalid AMI key format"),
+				}
+				return
+			}
+
 			region := parts[0]
-			id := parts[1]
-			amisByRegion[region] = append(amisByRegion[region], id)
-		}
-	}
+			amiID := parts[1]
 
-	for region, amiIDs := range amisByRegion {
-		regionCfg := cfg.Copy()
-		regionCfg.Region = region
-		client := ec2.NewFromConfig(regionCfg)
+			// Send start message
+			updateChan <- amiUpdateStartMsg{amiKey: key}
 
-		for _, amiID := range amiIDs {
+			// Make the API call
+			regionCfg := cfg.Copy()
+			regionCfg.Region = region
+			client := ec2.NewFromConfig(regionCfg)
+
 			input := &ec2.ModifyImageAttributeInput{
 				ImageId: aws.String(amiID),
 				LaunchPermission: &types.LaunchPermissionModifications{
@@ -265,14 +298,25 @@ func makeAMIsPrivate(ctx context.Context, cfg aws.Config, selectedAMIs map[strin
 
 			_, err := client.ModifyImageAttribute(ctx, input)
 			if err != nil {
-				fmt.Printf("Failed to make AMI %s private in %s: %v\n", amiID, region, err)
+				updateChan <- amiUpdateErrorMsg{
+					amiKey: key,
+					err:    err,
+				}
 			} else {
-				fmt.Printf("✓ Made AMI %s private in %s\n", amiID, region)
+				updateChan <- amiUpdateSuccessMsg{amiKey: key}
 			}
-		}
+		}(amiKey)
 	}
 
-	green := color.New(color.FgGreen).SprintFunc()
-	fmt.Printf("\n%s Successfully made %d AMI(s) private.\n", green("✓"), len(selectedAMIs))
-	return nil
+	// Wait for all updates to complete
+	go func() {
+		wg.Wait()
+		updateChan <- allUpdatesCompleteMsg{}
+	}()
+}
+
+func refreshAMIStatus(ctx context.Context, cfg aws.Config, trees []AMITree) {
+	// This function can be used to refresh AMI status from AWS
+	// For now, we'll rely on our local state updates
+	// In a production app, you might want to periodically refresh from AWS
 }
