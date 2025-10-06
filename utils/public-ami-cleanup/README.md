@@ -1,14 +1,16 @@
 # Public AMI Cleanup Tool
 
-An interactive CLI tool for managing public AMIs in AWS that start with the prefix `capa-ami-`.
+An interactive CLI tool for managing AMIs in AWS that start with the prefix `capa-ami-`, focusing on making public AMIs private.
 
 ## Features
 
-- Fetches all public AMIs with the `capa-ami-` prefix across configured regions
+- Fetches ALL AMIs (both public and private) with the `capa-ami-` prefix across configured regions
 - Displays AMIs in a tree structure showing root AMIs (us-east-1) and their copies
+- Shows proper hierarchy even when root AMIs are already private
+- Real-time status updates as AMIs are made private
 - Interactive selection with keyboard navigation
-- Bulk selection of entire trees or all AMIs
-- Converts selected public AMIs to private
+- Bulk selection of entire trees or all public AMIs
+- Converts selected public AMIs to private without closing the app
 
 ## Prerequisites
 
@@ -67,13 +69,20 @@ The tool searches for AMIs in the following regions:
 
 ## How it Works
 
-1. Fetches all public AMIs with the `capa-ami-` prefix from all configured regions
-2. Identifies root AMIs (those in us-east-1) and their copies in other regions
-3. Presents an interactive tree view for selection
-4. Upon confirmation, modifies the selected AMIs to remove public access
+1. Fetches ALL AMIs (public and private) with the `capa-ami-` prefix from all configured regions
+2. Identifies root AMIs (those in us-east-1) and groups their copies from other regions as children
+3. Displays proper tree structure even when root AMIs are already private
+4. Presents an interactive tree view showing status of each AMI (PUBLIC/PRIVATE)
+5. Allows selection of public AMIs only
+6. Upon confirmation, modifies the selected AMIs in the background to remove public access
+7. Updates the display in real-time to show the new status
 
 ## Notes
 
 - AMIs are grouped by their source relationship (copies are shown under their source AMI)
+- Private root AMIs are displayed with their public children properly grouped underneath
 - The tool only affects AMIs owned by your account
+- Only PUBLIC AMIs can be selected and made private
+- AMIs that are already PRIVATE are shown but cannot be selected
+- The app remains open after making changes, allowing you to continue working
 - Making an AMI private cannot be undone through this tool

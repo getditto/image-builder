@@ -84,14 +84,14 @@ func runApp() error {
 		return fmt.Errorf("unable to load SDK config: %v", err)
 	}
 
-	fmt.Println("Fetching public AMIs across regions...")
+	fmt.Println("Fetching AMIs across regions...")
 	amis, err := fetchAMIs(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to fetch AMIs: %v", err)
 	}
 
 	if len(amis) == 0 {
-		fmt.Println("No public AMIs found with prefix 'capa-ami-'")
+		fmt.Println("No AMIs found with prefix 'capa-ami-'")
 		return nil
 	}
 
@@ -115,16 +115,13 @@ func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 
 		client := ec2.NewFromConfig(regionCfg)
 
+		// Fetch ALL AMIs with the capa-ami- prefix (both public and private)
 		input := &ec2.DescribeImagesInput{
 			Owners: []string{"self"},
 			Filters: []types.Filter{
 				{
 					Name:   aws.String("name"),
 					Values: []string{"capa-ami-*"},
-				},
-				{
-					Name:   aws.String("is-public"),
-					Values: []string{"true"},
 				},
 			},
 		}
@@ -138,14 +135,21 @@ func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 		for _, image := range result.Images {
 			createdDate, _ := time.Parse(time.RFC3339, aws.ToString(image.CreationDate))
 
+			// Determine if AMI is public or private
+			status := StatusPrivate
+			if aws.ToBool(image.Public) {
+				status = StatusPublic
+			}
+
 			ami := AMI{
 				ID:          aws.ToString(image.ImageId),
 				Name:        aws.ToString(image.Name),
 				Region:      region,
 				CreatedDate: createdDate,
-				Status:      StatusPublic,
+				Status:      status,
 			}
 
+			// Try to find source AMI from tags
 			for _, tag := range image.Tags {
 				if aws.ToString(tag.Key) == "SourceAMI" || aws.ToString(tag.Key) == "source-ami" {
 					ami.CopiedFrom = aws.ToString(tag.Value)
@@ -153,6 +157,7 @@ func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 				}
 			}
 
+			// If no tag, try to extract from description
 			if ami.CopiedFrom == "" && strings.Contains(aws.ToString(image.Description), "ami-") {
 				parts := strings.Split(aws.ToString(image.Description), " ")
 				for _, part := range parts {
@@ -172,16 +177,18 @@ func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 
 func buildAMITrees(amis []AMI) []AMITree {
 	trees := make(map[string]*AMITree)
+	amiByID := make(map[string]*AMI)
 	amiByNameAndRegion := make(map[string]*AMI)
 	orphans := []AMI{}
 
-	// Build lookup map by AMI name and region
+	// Build lookup maps
 	for i := range amis {
+		amiByID[amis[i].ID] = &amis[i]
 		key := fmt.Sprintf("%s:%s", amis[i].Name, amis[i].Region)
 		amiByNameAndRegion[key] = &amis[i]
 	}
 
-	// First, create trees for all us-east-1 AMIs (root AMIs)
+	// First, create trees for ALL us-east-1 AMIs (root AMIs) - both public and private
 	for i := range amis {
 		if amis[i].Region == "us-east-1" {
 			trees[amis[i].Name] = &AMITree{
@@ -202,13 +209,29 @@ func buildAMITrees(amis []AMI) []AMITree {
 				found := false
 				if amis[i].CopiedFrom != "" {
 					// Try to find tree by ID
-					for name, tree := range trees {
+					for _, tree := range trees {
 						if tree.Root.ID == amis[i].CopiedFrom {
 							tree.Children = append(tree.Children, &amis[i])
 							found = true
 							break
 						}
-						// Also check if the name matches with slight variations
+					}
+
+					// If not found in trees, check if CopiedFrom points to another region's AMI
+					if !found {
+						if sourceAMI, exists := amiByID[amis[i].CopiedFrom]; exists {
+							// Check if there's a tree with the same name as the source
+							if tree, treeExists := trees[sourceAMI.Name]; treeExists {
+								tree.Children = append(tree.Children, &amis[i])
+								found = true
+							}
+						}
+					}
+				}
+
+				// Try name matching with variations as a last resort
+				if !found {
+					for name, tree := range trees {
 						if strings.HasPrefix(amis[i].Name, name) || strings.HasPrefix(name, amis[i].Name) {
 							tree.Children = append(tree.Children, &amis[i])
 							found = true
