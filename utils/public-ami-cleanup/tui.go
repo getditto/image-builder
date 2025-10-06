@@ -102,15 +102,16 @@ func initialModel(trees []AMITree, cfg aws.Config, ctx context.Context) model {
 	})
 
 	m := model{
-		trees:      trees,
-		selected:   make(map[string]bool),
-		expanded:   make(map[string]bool),
-		config:     cfg,
-		ctx:        ctx,
-		showHelp:   true,
-		height:     24, // Default height, will be updated
-		width:      80, // Default width, will be updated
-		updateChan: make(chan tea.Msg),
+		trees:       trees,
+		selected:    make(map[string]bool),
+		expanded:    make(map[string]bool),
+		config:      cfg,
+		ctx:         ctx,
+		showHelp:    true,
+		hidePrivate: true, // Default to hiding private AMIs
+		height:      24,   // Default height, will be updated
+		width:       80,   // Default width, will be updated
+		updateChan:  make(chan tea.Msg),
 	}
 
 	// Start with all trees collapsed
@@ -693,9 +694,8 @@ func (m model) View() string {
 		}
 
 		// Truncate line if too long
-		if len(line) > m.width {
-			line = line[:m.width-3] + "..."
-		}
+		// Note: Don't truncate styled lines as lipgloss handles overflow
+		// and len(line) includes ANSI codes which don't count toward visual width
 
 		s.WriteString(line)
 		s.WriteString("\n")

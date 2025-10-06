@@ -110,7 +110,9 @@ func runApp() error {
 func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 	var allAMIs []AMI
 
-	for _, region := range regions {
+	for i, region := range regions {
+		fmt.Printf("Querying %s (%d/%d)...\n", region, i+1, len(regions))
+
 		regionCfg := cfg.Copy()
 		regionCfg.Region = region
 
@@ -132,6 +134,8 @@ func fetchAMIs(ctx context.Context, cfg aws.Config) ([]AMI, error) {
 			fmt.Printf("Warning: Failed to fetch AMIs in %s: %v\n", region, err)
 			continue
 		}
+
+		fmt.Printf("  Found %d AMIs in %s\n", len(result.Images), region)
 
 		for _, image := range result.Images {
 			createdDate, _ := time.Parse(time.RFC3339, aws.ToString(image.CreationDate))
