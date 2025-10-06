@@ -68,6 +68,9 @@ var (
 
 	scrollStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240"))
+
+	dateStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("245"))
 )
 
 func initialModel(trees []AMITree, cfg aws.Config) model {
@@ -449,7 +452,7 @@ func (m model) View() string {
 			}
 
 			name := item.ami.Name
-			maxNameLen := m.width - 50
+			maxNameLen := m.width - 80
 			if maxNameLen < 20 {
 				maxNameLen = 20
 			}
@@ -457,7 +460,10 @@ func (m model) View() string {
 				name = name[:maxNameLen-3] + "..."
 			}
 
-			line = fmt.Sprintf("%s%s%s %s %s %s (%s) %s",
+			// Format date as YYYY-MM-DD HH:MM:SS
+			dateStr := item.ami.CreatedDate.Format("2006-01-02 15:04:05")
+
+			line = fmt.Sprintf("%s%s%s %s %s %s (%s) %s %s",
 				prefix,
 				indent,
 				expandIcon,
@@ -465,6 +471,7 @@ func (m model) View() string {
 				name,
 				amiIDStyle.Render(item.ami.ID),
 				regionStyle.Render(item.ami.Region),
+				dateStyle.Render(dateStr),
 				publicStyle.Render("[PUBLIC]"))
 
 			if len(item.tree.Children) > 0 {
@@ -489,13 +496,17 @@ func (m model) View() string {
 				}
 			}
 
-			line = fmt.Sprintf("%s%s%s %s %s (%s) %s",
+			// Format date as YYYY-MM-DD HH:MM:SS
+			dateStr := item.ami.CreatedDate.Format("2006-01-02 15:04:05")
+
+			line = fmt.Sprintf("%s%s%s %s %s (%s) %s %s",
 				prefix,
 				indent,
 				connector,
 				selectIcon,
 				amiIDStyle.Render(item.ami.ID),
 				regionStyle.Render(item.ami.Region),
+				dateStyle.Render(dateStr),
 				publicStyle.Render("[PUBLIC]"))
 		}
 
