@@ -654,7 +654,16 @@ func (m model) View() string {
 				statusStr)
 
 			if len(item.tree.Children) > 0 {
-				line += fmt.Sprintf(" (%d copies)", len(item.tree.Children))
+				publicCopies := 0
+				privateCopies := 0
+				for _, child := range item.tree.Children {
+					if child.Status == StatusPublic {
+						publicCopies++
+					} else if child.Status == StatusPrivate {
+						privateCopies++
+					}
+				}
+				line += fmt.Sprintf(" (%d public, %d private)", publicCopies, privateCopies)
 			}
 
 			if item.ami.Status == StatusError && item.ami.ErrorMsg != "" {
