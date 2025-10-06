@@ -2,3 +2,4 @@
 .idea/
 .venv/
 .envrc
+utils/public-ami-cleanup/ami-cleanup
