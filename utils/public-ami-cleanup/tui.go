@@ -306,7 +306,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateViewport()
 			}
 
-		case "pgdn":
+		case "pgdown":
 			if !m.updating {
 				pageSize := (m.height - 10) / 2
 				m.cursor += pageSize
