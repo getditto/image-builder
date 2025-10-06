@@ -190,6 +190,7 @@ jobs:
           AWS_PROFILE: ditto-prod-primary
           K8S_VERSION: ${{ github.event.inputs.k8s_version }}
           TARGET_OS: flatcar
+          TARGET_ARCH: ${{ matrix.arch }}
         run: |
           ./images/capi/update_k8s_version.sh && \
           if [ "${{ matrix.arch }}" = "amd64" ]; then
